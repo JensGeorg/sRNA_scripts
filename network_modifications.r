@@ -28,9 +28,9 @@ setwd(working_directory)
 d<-dir()
 
 network_file<-d[grep("_Network.txt",d)[1]]
-anno_file<-d[grep("_Network_annotation.txt",d)[1]]
-cluster_file<-d[grep("_Network_cluster.txt",d)[1]]
-synt_table<-d[grep("_Synteny_table.txt",d)[1]]
+anno_file<-d[grep("_Network_Annotation.txt",d)[1]]
+cluster_file<-d[grep("_Network_Cluster.txt",d)[1]]
+synt_table<-d[grep("_Synteny_Table.txt",d)[1]]
 
 
 synt<-read.csv(synt_table,sep="\t", header=T)
