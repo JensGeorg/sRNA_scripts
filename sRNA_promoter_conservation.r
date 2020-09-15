@@ -17,7 +17,7 @@ require(ggtree)
 
 
 #filename<-file('stdin', 'r') # result fasta file from GLASSgo
-filename<-"~/Copra2_paper/Glassgo/RyhB/RyhB_ref2.fa"
+filename<-"~/For_CopraRNA2.0/OxyS/oxyS.txt"
 #filename<-"~/media/jens@margarita/Copra2_paper/Glassgo/RyhB/RyhB_ref2.fa"
 #filename<-"~/Copra2_paper/Glassgo/Spot42/Spot42_rev.fa"
 script_path<-"~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py"
@@ -257,7 +257,7 @@ write.table(n, file="sRNA_per_org.txt", sep="\t")
 #16S RNA
 orgs<-unique(coor[,1])
 command<-paste("python3 ", script_path, " -s ", db_path, " -rRNA ", paste(orgs, collapse=" "))
-print(command)
+#print(command)
 rRNA<-system(command, intern=T)
 
 startp<-grep(">",rRNA)[1]
@@ -950,6 +950,41 @@ dev.off()
 
 
 
+st2<-"p<-ggtree(tree) "#+ geom_tiplab(size=0.8, col=color2[cl] )"# + geom_tiplab(size=0.8, col=color2[cl])"#, layout='circular') "#  "
+st<-"p"
+cl<-c()
+ti<-c()
+na<-c()
+an<-c()
+for(i in 1:length(out_nodes)){
+	la<-leafs(out_nodes[i],tree)[[1]]
+	cl<-c(cl,lab2[la])
+	ti<-c(ti,la)
+	#print(c(out_nodes[i], unique(lab2[la])))
+	st<-paste(st, " %>% collapse(node=c(", out_nodes[i], "),color='black',fill='",color2[as.numeric(unique(lab2[la]))],"', 'max') ", sep="")
+	tmp<-unique(gsub(" .*","",tree$tip.label[la]))
+	if(length(tmp)>0){
+		tmp<-paste(sort(tmp), collapse="\n")
+	}
+	an<-c(an,tmp)
+	if(is.element(out_nodes[i],tips2)==F){
+		st2<-paste(st2, " + geom_cladelabel(node=",out_nodes[i],",label='",(tmp),"', align=T, fontsize=1,color='",color2[as.numeric(unique(lab2[la]))],"')", sep="")
+	}
+}
+
+
+cl<-cl[order(ti)]
+ eval(parse(text=st2))
+
+#p<-ggtree(tree)  + geom_tiplab(size=0.8, col=color2[cl]) #+ geom_cladelabel(node=333, label='Shewanella', angle=-95, hjust=.5, fontsize=8)
+
+ #eval(parse(text=st))
+
+pdf("sRNA_linear.pdf")
+
+ eval(parse(text=st))
+
+dev.off()
 
 
 # pdf("tree_circ.pdf")
