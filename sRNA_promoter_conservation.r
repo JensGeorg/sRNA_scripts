@@ -6,14 +6,8 @@ require(phangorn)
 require(ggtree)
 #genbank_groper_sqliteDB_ver00.py
 #CALL:
-#R --slave -f  ~/media/jens@margarita/Syntney/packages/Rscript/Synteny_Cluster_Script_sqlite.r --args write_files=FALSE threads=10  synteny_window=3000 script_path=~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/Syntney/syntney.db < ~/media/jens@margarita/Syntney/Rfam_db.fasta
-#R --slave -f  ~/media/jens@margarita/Syntney/packages/Rscript/Synteny_Cluster_Script_sqlite.r --args write_files=FALSE threads=10 filename=~/media/jens@margarita/Syntney/testfiles/inputForJens.fasta  synteny_window=3000 script_path=~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/Syntney/new.db
+#R --slave -f  ~/sRNA_scripts/sRNA_promoter_conservation.r --args wildcard_ids=U00096.3,CP003069.1 filename=~/For_CopraRNA2.0/OxyS/OxyS2/oxyS.txt  synteny_window=5000 script_path=~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/synt.db
 
-
-#R --slave -f  ~/media/jens@margarita/Syntney/packages/Rscript/Synteny_Cluster_Script_sqlite.r --args write_files=FALSE threads=10 filename=~/media/jens@margarita/Copra2_paper/Glassgo/RyhB.fa  synteny_window=3000 script_path=~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/Syntney_db/synt.db
-#R --slave -f  ~/media/jens@margarita/Syntney/packages/Rscript/Synteny_Cluster_Script_sqlite.r --args write_files=FALSE threads=10 filename=~/media/jens@margarita/Syntney/testfiles/Spot42.fa  synteny_window=5000 script_path=~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/Syntney_db/synt.db
-
-#	python3 Syntney.py -i ~/media/jens@margarita/Copra2_paper/Glassgo/Spot42.fa  -o ~/media/jens@margarita/Copra2_paper/Glassgo/Spot42/ -n cys -r off -d ~/Syntney_db/synt.db -c ~/media/jens@margarita/Syntney/packages/Rscript/Synteny_Cluster_Script_sqlite.r  -s ~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py
 
 
 #filename<-file('stdin', 'r') # result fasta file from GLASSgo
@@ -1233,7 +1227,7 @@ plot_function4<-function(out, cdhit_result, wind=3000, outformat="cairo_pdf", fa
 
 }
 
-plot_function4(out,cd,wind=synteny_window,outformat="pdf", fasta="Spot42")
+plot_function4(out,cd,wind=synteny_window,outformat="pdf", fasta="sRNA")
 
 
 ########## Copra selection
