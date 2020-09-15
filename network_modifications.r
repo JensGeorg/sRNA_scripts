@@ -415,12 +415,12 @@ for(i in 1:min(length(uid),max_synt=max_synt)){
 					tmp<-length(match(x,c(tmp[,1],tmp[,2])))
 				}))
 				ov<-which(ov==max(ov))
-				path<-path[[ov]]
+				path<-path[ov]
 				if(length(path)>1){
 					# length of path to srna
 					le<-unlist(lapply(path, length))
 					le<-which(le==min(le))
-					path<-path[[le]]
+					path<-path[le]
 					if(length(path)>1){
 						path<-path[[1]]
 					}
