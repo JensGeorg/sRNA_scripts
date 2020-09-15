@@ -11,7 +11,7 @@ require(ggtree)
 
 
 #filename<-file('stdin', 'r') # result fasta file from GLASSgo
-filename<-"~/For_CopraRNA2.0/OxyS/oxyS.txt"
+filename<-"~/For_CopraRNA2.0/OxyS/IsaR1/IsaR1.txt"
 #filename<-"~/media/jens@margarita/Copra2_paper/Glassgo/RyhB/RyhB_ref2.fa"
 #filename<-"~/Copra2_paper/Glassgo/Spot42/Spot42_rev.fa"
 script_path<-"~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py"
@@ -240,7 +240,9 @@ fasta<-read.delim(filename, header=F, sep="\t")
 closeAllConnections()
 fasta<-as.character(fasta[,1])
 coor<-export_ncRNA_coordinates(fasta)
-coor<-remove_overlapping_homologs(coor)
+while(length(which(duplicated(coor[,"ID"])))>0){
+	coor<-remove_overlapping_homologs(coor)
+}
 
 
 n<-sort(table(paste(coor[,1],coor[,"name"],sep="_")))
