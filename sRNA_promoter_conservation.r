@@ -780,7 +780,8 @@ tree<-fitJC$tree
 #tree<-fit$tree
 nam<-match(tree$tip.label, coor[,"ID"])
 nam_id<-match(tree$tip.label, id_fam[,2])
-tree$tip.label<-paste(coor[nam,"name"],coor[nam,"ID"],"|",id_fam[nam_id,1],";",id_fam[nam_id,3],sep="")
+lab1<-paste(coor[nam,"name"],coor[nam,"ID"],"|",id_fam[nam_id,1],";",id_fam[nam_id,3],sep="")
+tree$tip.label<-make.names(lab1)
 lab2<-id_fam[nam_id,1]
 
 
