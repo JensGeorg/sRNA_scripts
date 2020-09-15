@@ -1,6 +1,7 @@
 
 #CALL:
 #R --slave -f  ~/media/jens@margarita/Syntney/packages/Rscript/network_modifications.r --args working_directory="" only_sig_nodes=TRUE max_synt=20 thres_anno=0.025 thres_edge=0.025
+#R --slave -f network_modifications.r --args working_directory=~/For_CopraRNA2.0/OxyS/RprA/ only_sig_nodes=TRUE max_synt=20 thres_anno=0.025 thres_edge=0.025
 
 working_directory<-getwd()
 only_sig_nodes<-TRUE
@@ -26,7 +27,6 @@ thres_edge<-as.numeric(thres_edge)
 
 setwd(working_directory)
 d<-dir()
-
 network_file<-d[grep("_Network.txt",d)[1]]
 anno_file<-d[grep("_Network_Annotation.txt",d)[1]]
 cluster_file<-d[grep("_Network_Cluster.txt",d)[1]]
@@ -130,6 +130,9 @@ while(ncol(clustab)>1){
 	clustab<-clustab[-del,-del]
 	clus_list[[i]]<-tmp
 	i<-i+1
+	if(is.vector(clustab)==T){
+		break
+	}
 }
 
 
@@ -216,10 +219,10 @@ for(i in 1:length(l2)){
 }
 
 for(i in 1:nrow(cluster)){
-	print(i)
+	#print(i)
 	tmp<-unlist(strsplit(as.character(cluster[i,2:3]),","))
 	tmp<-paste0(tmp,"_")
-	count<-mat[match(tmp,mat[,1]),2]
+	count<-na.omit(mat[match(tmp,mat[,1]),2])
 	
 	
 	# count<-lapply(tmp, function(x){
