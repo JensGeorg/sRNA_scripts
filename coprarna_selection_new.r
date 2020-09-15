@@ -7,15 +7,16 @@ require(seqinr)
 #require(RSQLite)
 #require(rentrez)
 require(phangorn)
+require(ggtree)
 #require(stringi)
 # parameters from function call:
 
 
-#R --slave -f /media/cyano_share/data/WM/sRNA/coprarna_selection.r --args filename=~/For_CopraRNA2.0/OxyS/oxyS.txt db_path=~/synt.db cop_path=~/CopraRNA-git/update_kegg2refseq/run/CopraRNA_available_organisms.txt script_path=~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py  nameOxyS ooi=NC_002516.2 maxorgs=15 maxdis=1.5 clustervalue=1 mindis=0.001
+#R --slave -f ~/sRNA_scripts/coprarna_selection_new.r --args filename=~/For_CopraRNA2.0/OxyS/OxyS2/oxyS.txt db_path=~/synt.db cop_path=~/CopraRNA-git/update_kegg2refseq/run/CopraRNA_available_organisms.txt script_path=~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py  nameOxyS ooi=NC_002516.2 maxorgs=15 maxdis=1.5 clustervalue=1 mindis=0.001
 
 #filename<-file('stdin', 'r') # result fasta file from GLASSgo
 #filename<-"~/media/jens@margarita/Syntney/testfiles/error2.fasta"
-filename<-"~/Copra2_paper/Glassgo/RyhB/RyhB_ref2.fa"
+filename<-"~/For_CopraRNA2.0/OxyS/OxyS2/oxyS.txt"
 
 script_path<-"~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB_ver01.py"
 script_path<-"~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py"
@@ -26,7 +27,8 @@ threads<-30
 name<-"sRNA"
 write_files<-F
 rRNA_existence_threshold<-0.6
-
+thres_val<-0.0001
+max_orgs<-100
 
 #ooi=c("NC_000964.3","NZ_CP018205","NC_007795")
 #duplicates_allowed<-F  # if FALSE only one homolog from one organism is plotted
@@ -37,6 +39,7 @@ ooi<-"NC_000913" # organism of interest - important for the CopraRNA organism se
 # S. oneidensis, V. cholerae, Aeromonas hydrofila, Y. pseudotubecolosis YPIII, S. enterica, Xenorhabdus Nematophila,  Aliivibrio salmonicida
 wildcard<-c("NC_004347","NC_002505","NZ_CP006870","NC_010465","NC_016810","NC_014228","NC_011312")
 wildcard<-c("NC_004347","NC_002505","NZ_CP006870","NC_010465","NC_016810","NC_014228")
+
 reduced_svg=F
 random_extension=F # make locus_tags unique by adding random extensions
 relatives<-5 # number of relative organisms to ooi or wildcard orgs
@@ -51,11 +54,15 @@ for(i in 1:length(args)){
 	assign(as.character(temp1),temp2)
  }
 
-duplicates_allowed<-as.logical(duplicates_allowed)
-synteny_window<-as.numeric(synteny_window)
-mindis<-as.numeric(mindis)
-clustervalue<-as.numeric(clustervalue)
-closeorgs<-as.numeric(closeorgs)
+#duplicates_allowed<-as.logical(duplicates_allowed)
+#synteny_window<-as.numeric(synteny_window)
+#mindis<-as.numeric(mindis)
+#clustervalue<-as.numeric(clustervalue)
+#closeorgs<-as.numeric(closeorgs)
+unspli<-grep(",", wildcard)
+if(length(unspli)>0){
+	wildcard<-strsplit(wildcard,",")[[1]]
+}
 
 
 split_glassgo<-function(x){
@@ -667,7 +674,9 @@ fasta<-readLines(filename)
 #fasta<-as.character(fasta[,1])
 #fasta<-sub("/[0123456789]*.[0123456789]*","",fasta)
 coor<-export_ncRNA_coordinates(fasta)
-coor<-remove_overlapping_homologs(coor)
+while(length(which(duplicated(coor[,"ID"])))>0){
+	coor<-remove_overlapping_homologs(coor)
+}
 
 #seq1<-coor[[2]]
 #coor<-coor[[1]]
@@ -708,6 +717,21 @@ if(length(na)>0){
 	coor<-coor[-na,]
 }
 
+tmp<-na.omit(match(gsub("\\..*","",ooi),gsub("\\..*","",coor[,1])))
+if(length(tmp)==0){
+	tmp<-na.omit(match(gsub("\\..*","",ooi),gsub("\\..*","",coor[,"fin"])))
+}
+ooi<-coor[tmp,"fin"]
+
+tmp<-na.omit(match(gsub("\\..*","",wildcard),gsub("\\..*","",coor[,1])))
+if(length(tmp)==0){
+	tmp<-na.omit(match(gsub("\\..*","",wildcard),gsub("\\..*","",coor[,"fin"])))
+}
+if(length(tmp)==0){
+	wildcard<-coor[tmp,"fin"]
+} else {
+	wildcard<-c()
+}
 
 #if more than 1 homolog is detected for one organism or the same Refseq ID, keep only the homolog with the highest identity to the input
 ooi_pos<-grep(ooi,coor[,"fin"])
@@ -814,7 +838,7 @@ coor<-coor[order(iden, decreasing=T), ]
 
 
 keep<-c(ooi,wildcard)
-keep<-na.omit(match(keep,gsub("\\..*","",coor[,"fin"])))
+keep<-na.omit(match(gsub("\\..*","",keep),gsub("\\..*","",coor[,"fin"])))
 keep2<-coor[keep,]
 coor<-coor[-keep,]
 
@@ -882,7 +906,7 @@ for(i in 1:length(nam)){
 	nam2<-c(nam2,temp1)
 }
 nam2<-paste(nam2,coor[,"fin"], sep="_")
-
+nam2<-make.names(nam2)
 coor<-cbind(coor,nam2)
 # extract information of sRNA gene neighborhood for synteny analysis and draw synteny pdf
 
@@ -960,8 +984,49 @@ dm<-as.matrix(dm)
 ma<-match(rownames(dm), coor[,1])
 rownames(dm)<-gsub("\\..*","",coor[ma,"fin"])
 colnames(dm)<-rownames(dm)
+
 dm_red<-exclude_similars(dm,ooi=c(ooi,wildcard),thres=0.02)
-dim(dm_red)
+a<-exclude_similars(dm,ooi=c(ooi,wildcard),thres=0.02)
+
+#################
+
+max_orgs<-max_orgs-(length(ooi)+length(wildcard))*relatives
+
+steps<-0
+thres_vect<-c()
+a<-dm
+dim_vect<-c()
+if(dim(a)[1] > max_orgs){
+	while(is.null(a) | dim(a)[1] > max_orgs){
+		a<-exclude_similars(dm,ooi=c(ooi,wildcard),thres=thres_val)
+		thres_vect<-c(thres_vect,thres_val)
+		dims<-dim(a)[1]
+		names(dims)<-thres_val
+		dim_vect<-c(dim_vect,dims)
+		thres_val<-thres_val*10		
+	}
+	while(steps < 10 & dim(a)[1] != max_orgs){
+		thres_vect<-thres_vect[(length(thres_vect)-1):length(thres_vect)]
+		if(dim(a)[1]<max_orgs){
+			thres_val<-thres_vect[2]-abs(thres_vect[1]-thres_vect[2])/2
+		} else {
+			thres_val<-thres_vect[2]+abs(thres_vect[1]-thres_vect[2])/2
+		}
+		thres_vect<-c(thres_vect,thres_val)
+		a<-exclude_similars(dm,ooi=c(ooi,wildcard),thres=thres_val)
+		steps<-steps+1
+		dims<-dim(a)[1]
+		names(dims)<-thres_val
+		dim_vect<-c(dim_vect,dims)
+	}
+	thres_val<-as.numeric(names(which(abs(dim_vect-max_orgs)==min(abs(dim_vect-max_orgs)))[1]))
+	dm_red<-exclude_similars(dm,ooi=c(ooi,wildcard),thres=thres_val)
+}
+
+
+#########################
+
+
 
 get_similars<-function(dm, ref_orgs, thres=0.01, num=rep(3,length(ref_orgs)),cands){
 	outp<-c()
@@ -994,15 +1059,15 @@ get_similars<-function(dm, ref_orgs, thres=0.01, num=rep(3,length(ref_orgs)),can
 	outp
 }
 # S. oneidensis, V. cholerae, Aeromonas hydrofila, Y. pseudotubecolosis YPIII, S. enterica, Xenorhabdus Nematophila, Aliivibrio salmonicida
-cnds<-get_similars(dm, ref_orgs=c(ooi,wildcard), thres=0.015, num=rep(relatives,length(wildcard)+1), cands=rownames(dm_red))
+cnds<-get_similars(dm, ref_orgs=c(ooi,wildcard), thres=0.001, num=rep(relatives,length(wildcard)+1), cands=rownames(dm_red))
 cnds<-na.omit(c(colnames(dm_red),cnds))
-length(unique(cnds))
+#length(unique(cnds))
 
 n2<-unique(match(cnds,gsub("\\..*","",coor[,"fin"])))
 
 orgs<-(coor[n2,1])
 
-orgs<-c(orgs,"CP053706.1")
+#orgs<-c(orgs,"CP053706.1")
 
 command<-paste("python3 ", script_path, " -s ", db_path, " -rRNA ", paste(orgs, collapse=" "))
 print(command)
@@ -1035,7 +1100,8 @@ dm4<-as.matrix(dm3)
 #save(dm2, file="distances.Rdata")
 	
 treeNJ <- NJ(dm3)
-
+pos<-match(treeNJ$tip.label,coor[,1])
+treeNJ$tip.label<-coor[pos,"nam2"]
 	#tree <- pratchet(dat)          # parsimony tree
 	#tree <- nnls.phylo(tree, dm)
 
@@ -1043,6 +1109,9 @@ treeNJ <- NJ(dm3)
 	#fitJC = optim.pml(fitStart, model="GTR", optGamma=TRUE, rearrangement="none")
 	#treeNJ<-tree
 #cd Cop
+pdf("CopraRNA_input_org_tree.pdf")
+ggtree(treeNJ) + geom_tiplab(size=1)
+dev.off()
 cop<-match(unique(cnds),gsub("\\..*","",coor[,"fin"]))
 
 fast<-c()
