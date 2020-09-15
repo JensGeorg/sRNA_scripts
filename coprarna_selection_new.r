@@ -12,7 +12,7 @@ require(ggtree)
 # parameters from function call:
 
 
-#R --slave -f ~/sRNA_scripts/coprarna_selection_new.r --args filename=~/For_CopraRNA2.0/OxyS/OxyS2/oxyS.txt db_path=~/synt.db cop_path=~/CopraRNA-git/update_kegg2refseq/run/CopraRNA_available_organisms.txt script_path=~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py  nameOxyS ooi=NC_002516.2 maxorgs=15 maxdis=1.5 clustervalue=1 mindis=0.001
+#R --slave -f ~/sRNA_scripts/coprarna_selection_new.r --args filename=~/For_CopraRNA2.0/OxyS/OxyS2/oxyS.txt db_path=~/synt.db cop_path=~/CopraRNA-git/update_kegg2refseq/run/CopraRNA_available_organisms.txt script_path=~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py  name=OxyS ooi=U00096.3
 
 #filename<-file('stdin', 'r') # result fasta file from GLASSgo
 #filename<-"~/media/jens@margarita/Syntney/testfiles/error2.fasta"
