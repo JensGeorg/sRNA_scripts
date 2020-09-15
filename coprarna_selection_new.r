@@ -11,13 +11,7 @@ require(phangorn)
 # parameters from function call:
 
 
-#R --slave -f /media/cyano_share/data/WM/sRNA/coprarna_selection.r --args filename=esrA   name=EsrA_15 ooi=NC_002516.2 maxorgs=15 maxdis=1.5 clustervalue=1 mindis=0.001
-
-#CALL:
-#R --slave -f  /home/jens/jensSicherung/GLASSgo2/GLASSgo_postprocessing_10_steffen_databank_sqlite.r --args filename=debug.fasta duplicates_allowed=TRUE synteny_window=3000 refpath=/media/cyano_share/data/GLASSgo_postprocessing/accession_to_refseq cop_path=/media/cyano_share/data/GLASSgo_postprocessing/CopraRNA_available_organisms.txt  name=testfile coprarna_compatible=TRUE
-#R --slave -f  /home/jens/jensSicherung/GLASSgo2/GLASSgo_postprocessing_6.r --args filename="sRNA.txt" duplicates_allowed=FALSE synteny_window=3000  name=FnrS coprarna_compatible=TRUE ooi=NC_000913
-
-
+#R --slave -f /media/cyano_share/data/WM/sRNA/coprarna_selection.r --args filename=~/For_CopraRNA2.0/OxyS/oxyS.txt db_path=~/synt.db cop_path=~/CopraRNA-git/update_kegg2refseq/run/CopraRNA_available_organisms.txt script_path=~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py  nameOxyS ooi=NC_002516.2 maxorgs=15 maxdis=1.5 clustervalue=1 mindis=0.001
 
 #filename<-file('stdin', 'r') # result fasta file from GLASSgo
 #filename<-"~/media/jens@margarita/Syntney/testfiles/error2.fasta"
@@ -33,35 +27,19 @@ name<-"sRNA"
 write_files<-F
 rRNA_existence_threshold<-0.6
 
-synteny_window<-3000 # number of bases upstream and downstream of the sRNA that were searched for protein coding genes for the synteny analysis
-
-
 
 #ooi=c("NC_000964.3","NZ_CP018205","NC_007795")
 #duplicates_allowed<-F  # if FALSE only one homolog from one organism is plotted
-name<-"RsaA"  # name of the investigated sRNA
+name<-"sRNA"  # name of the investigated sRNA
 
 ooi<-"NC_000913" # organism of interest - important for the CopraRNA organism selection
 
-coprarna_compatible<-T # organsims are filtered based on the CopraRNA_available_organisms.txt file
-
-maxorgs<-15 # number of orgs for CopraRNA prediction
-mindis<-0.001 # organisms which have a lower cophonetic distances to each other in a 16S phylogentic tree are excluded to reduce complexity. A respective reference organism is kept
-maxdis<-1.5 # # organisms which have a higher cophonetic distances to each the ooi are excluded.
-closeorgs<-3 # number of closest relatives to the ooi for CopraRNA
-clustervalue<-2 # the higher the higher the resolution of tree sub-groups
 # S. oneidensis, V. cholerae, Aeromonas hydrofila, Y. pseudotubecolosis YPIII, S. enterica, Xenorhabdus Nematophila,  Aliivibrio salmonicida
 wildcard<-c("NC_004347","NC_002505","NZ_CP006870","NC_010465","NC_016810","NC_014228","NC_011312")
 wildcard<-c("NC_004347","NC_002505","NZ_CP006870","NC_010465","NC_016810","NC_014228")
-refseq_required=T
-outorg="NC_000964.3" # genome accssion of outgroup organsim for phylogenetic tree, if "internal" organism with highest distance to ooi is selected as outgroup
-min_size<-2  # minimal size of tree-based cluster
-mixed_sources=T # True if several GLAssgo outputs are pasted together
 reduced_svg=F
 random_extension=F # make locus_tags unique by adding random extensions
-full_tree=F
-exact_tree=T
-rRNA_phylogeny<-T
+relatives<-5 # number of relative organisms to ooi or wildcard orgs
 
 args <- commandArgs(trailingOnly = TRUE) 
 
@@ -72,16 +50,12 @@ for(i in 1:length(args)){
 	temp2<-temp[2]
 	assign(as.character(temp1),temp2)
  }
- full_tree<-as.logical(full_tree)
+
 duplicates_allowed<-as.logical(duplicates_allowed)
 synteny_window<-as.numeric(synteny_window)
 mindis<-as.numeric(mindis)
-maxorgs<-as.numeric(maxorgs)
-maxdis<-as.numeric(maxdis)
 clustervalue<-as.numeric(clustervalue)
 closeorgs<-as.numeric(closeorgs)
-exact_tree<-as.logical(exact_tree)
-rRNA_phylogeny<-as.logical(rRNA_phylogeny)
 
 
 split_glassgo<-function(x){
@@ -1020,7 +994,7 @@ get_similars<-function(dm, ref_orgs, thres=0.01, num=rep(3,length(ref_orgs)),can
 	outp
 }
 # S. oneidensis, V. cholerae, Aeromonas hydrofila, Y. pseudotubecolosis YPIII, S. enterica, Xenorhabdus Nematophila, Aliivibrio salmonicida
-cnds<-get_similars(dm, ref_orgs=c(ooi,wildcard), thres=0.015, num=c(4,4,4,7,4,3,4), cands=rownames(dm_red))
+cnds<-get_similars(dm, ref_orgs=c(ooi,wildcard), thres=0.015, num=rep(relatives,length(wildcard)+1), cands=rownames(dm_red))
 cnds<-na.omit(c(colnames(dm_red),cnds))
 length(unique(cnds))
 
@@ -1075,4 +1049,4 @@ fast<-c()
 for(i in cop){
 	fast<-c(fast,paste0(">",gsub("\\..*","",coor[i,"fin"])),coor[i,"sequence"])
 }
-writeLines(fast,con="~/media/jens@margarita/Copra2_paper/Glassgo/RyhB/copra_inp.fasta")
+writeLines(fast,con="CopraRNA_input.fasta")
