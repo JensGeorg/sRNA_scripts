@@ -11,7 +11,7 @@ require(ggtree)
 
 
 #filename<-file('stdin', 'r') # result fasta file from GLASSgo
-filename<-"~/For_CopraRNA2.0/OxyS/IsaR1/IsaR1.txt"
+filename<-"~/For_CopraRNA2.0/OxyS/IsaR1/clear/IsaR1clear.txt"
 #filename<-"~/media/jens@margarita/Copra2_paper/Glassgo/RyhB/RyhB_ref2.fa"
 #filename<-"~/Copra2_paper/Glassgo/Spot42/Spot42_rev.fa"
 script_path<-"~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py"
@@ -780,7 +780,7 @@ tree<-fitJC$tree
 #tree<-fit$tree
 nam<-match(tree$tip.label, coor[,"ID"])
 nam_id<-match(tree$tip.label, id_fam[,2])
-lab1<-paste(coor[nam,"name"],coor[nam,"ID"],"|",id_fam[nam_id,1],";",id_fam[nam_id,3],sep="")
+lab1<-paste(coor[nam,"name"]," | ",coor[nam,"ID"],"|",id_fam[nam_id,1],";",id_fam[nam_id,3],sep="")
 tree$tip.label<-make.names(lab1)
 lab2<-id_fam[nam_id,1]
 
@@ -887,7 +887,7 @@ for(i in 1:length(out_nodes)){
 	ti<-c(ti,la)
 	#print(c(out_nodes[i], unique(lab2[la])))
 	st<-paste(st, " %>% collapse(node=c(", out_nodes[i], "),color='black',fill='",color2[as.numeric(unique(lab2[la]))],"', 'max') ", sep="")
-	tmp<-unique(gsub(" .*","",tree$tip.label[la]))
+	tmp<-unique(gsub("\\..*","",tree$tip.label[la]))
 	if(length(tmp)>0){
 		tmp<-paste(sort(tmp), collapse="\n")
 	}
@@ -924,7 +924,7 @@ for(i in 1:length(out_nodes)){
 	ti<-c(ti,la)
 	#print(c(out_nodes[i], unique(lab2[la])))
 	st<-paste(st, " %>% collapse(node=c(", out_nodes[i], "),fill='",color2[as.numeric(unique(lab2[la]))],"', 'max') ", sep="")
-	tmp<-unique(gsub(" .*","",tree$tip.label[la]))
+	tmp<-unique(gsub("\\..*","",tree$tip.label[la]))
 	if(length(tmp)>0){
 		tmp<-paste(sort(tmp), collapse="\n")
 	}
@@ -959,7 +959,7 @@ for(i in 1:length(out_nodes)){
 	ti<-c(ti,la)
 	#print(c(out_nodes[i], unique(lab2[la])))
 	st<-paste(st, " %>% collapse(node=c(", out_nodes[i], "),color='black',fill='",color2[as.numeric(unique(lab2[la]))],"', 'max') ", sep="")
-	tmp<-unique(gsub(" .*","",tree$tip.label[la]))
+	tmp<-unique(gsub("\\..*","",tree$tip.label[la]))
 	if(length(tmp)>0){
 		tmp<-paste(sort(tmp), collapse="\n")
 	}
