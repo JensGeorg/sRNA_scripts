@@ -24,7 +24,7 @@ path<-sub("tree_based_overlap_copraRNA.r","",path)
 
 
 # preset path to required files, path can also be specified as argument
-cop_path<-paste(path,"CopraRNA_available_organisms.txt",sep="")
+cop_path<-paste(path,"CopraRNA_available_organisms.txt",sep="") # fixxxxxxxxxxxx
 
 
 
@@ -386,7 +386,7 @@ d2<-data.frame(node=out[,2],score=paste(round(bitscore[,1],digits=2)*100,"%",sep
 pdf("traget_overlap_tree.pdf")
 p<-ggtree(tree2) %<+% d %<+% d2 + geom_tiplab(size=1.5,hjust=-0.05, align = TRUE, linetype = "dotted", linesize = 0.05,) +  coord_cartesian(clip = 'off') + theme_tree2(plot.margin=margin(6, 120, 6, 6)) + geom_nodelab(aes(label=score), geom = "text", col=1,nudge_x=-0.02, size=2,nudge_y = 0.5) #+ geom_nodelab(aes(label=num), geom = "text", col=1,nudge_x=-0.02, size=2,nudge_y = 0.5)
 bars <- nodebar(dat, cols=1:parts, color=tmp,position='dodge',alpha=1)
-p1<-inset(p, bars, width=0.051, height=4)
+p1<-inset(p, bars, width=0.051, height=1)
 p1
 dev.off()
 
