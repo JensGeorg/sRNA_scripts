@@ -6,7 +6,7 @@ suppressPackageStartupMessages(require(ggtree))
 suppressPackageStartupMessages(require(ggimage))
 suppressPackageStartupMessages(require(NameNeedle))
 #suppressPackageStartupMessages(require(phangorn))
-suppressPackageStartupMessages(require(seqinr))
+#suppressPackageStartupMessages(require(seqinr))
 suppressPackageStartupMessages(require(ape))
 
 #call:
@@ -202,8 +202,15 @@ overlap_at_each_node<-function(tree,copra_results=copra_results,parts=5,weightin
 
 pairwise_identity<-function(tree,weighting=TRUE){
 	weight<-read.csv("weights.txt", sep="\t")
-	seqs<-read.fasta("ncrna.fa",as.string = T)
-	names(seqs)<-gsub("ncRNA_","",names(seqs))
+	seqs1<-readLines("ncrna.fa")
+	na<-grep(">", seqs1)
+	seqs<-list()
+	for(i in 1:(length(na)-1)){
+		seqs[[i]]<-paste(seqs1[(na[i]+1):(na[i+1]-1)],collapse="")
+		names(seqs)[i]<-gsub(">ncRNA_","",seqs1[na[i]])
+	}
+	seqs[[length(na)]]<-paste(seqs1[(na[length(na)]+1):(length(seqs1))],collapse="")
+	names(seqs)[length(na)]<-gsub(">ncRNA_","",seqs1[na[length(na)]])
 	defaultNeedleParams <- list(MATCH = 5,MISMATCH = -4,GAP = -4,GAPCHAR = "-")
 	inner<-unique(tree[[1]][,1])
 	topo<-tree[[1]] # tree topology
@@ -256,8 +263,16 @@ save(out, file="pairwise_identity.Rdata")
 
 bit<-function(tree){
 	weight<-read.csv("weights.txt", sep="\t")
-	seqs<-read.fasta("ncrna.fa",as.string = T)
-	names(seqs)<-gsub("ncRNA_","",names(seqs))
+	#seqs<-read.fasta("ncrna.fa",as.string = T)
+	seqs1<-readLines("ncrna.fa")
+	na<-grep(">", seqs1)
+	seqs<-list()
+	for(i in 1:(length(na)-1)){
+		seqs[[i]]<-paste(seqs1[(na[i]+1):(na[i+1]-1)],collapse="")
+		names(seqs)[i]<-gsub(">ncRNA_","",seqs1[na[i]])
+	}
+	seqs[[length(na)]]<-paste(seqs1[(na[length(na)]+1):(length(seqs1))],collapse="")
+	names(seqs)[length(na)]<-gsub(">ncRNA_","",seqs1[na[length(na)]])
 	inner<-unique(tree[[1]][,1])
 	topo<-tree[[1]] # tree topology
 	branch<-tree[[2]]	

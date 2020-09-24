@@ -450,7 +450,7 @@ dist_ham_srna<-as.matrix(dist_ham_srna)
 
 # combined weights
 weight_comb<-apply(cbind(weight16,weight_sRNA), 1, function(x){return(exp(mean(log(x))))})
-weight_comb<-weight_comb/max(weight_comb)
+weight_comb<-weight_comb/sum(weight_comb)
 
 
 # alignment of promoters
@@ -868,8 +868,8 @@ while(length(set)>0){
 out_nodes<-setdiff(out_nodes,tips2)
 color<-c("#117893","#D13B40","#7AB800","#477831","#EAAC9D","#FFAF12","#4EC5A5","#666666","#A2553A","#72617D")
 
-if(length(color)<length(unique(lab2[la]))){
-	nu<-length(unique(lab2[la]))-length(color)
+if(length(color)<max(unique(lab2))){
+	nu<-max(unique(lab2))-length(color)
 	color2<-c(color, rep(1,nu))
 } else{
 	color2<-color
