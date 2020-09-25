@@ -2,7 +2,7 @@ require(genbankr)
 require(topGO)
 
 
-#R --slave -f /home/jens/CopraRNA-git/coprarna_aux/functional_enrichment.r --args num=200
+#R --slave -f /home/jens/CopraRNA-git/coprarna_aux/functional_enrichment.r --args num=200 genomes_path=~/For_CopraRNA2.0/Genomes/  available_orgs_path=
 
 # get absolute path  
 #path="/home/jens/CopraRNA-git/coprarna_aux/"
@@ -10,9 +10,6 @@ initial.options <- commandArgs(trailingOnly = FALSE)
 path<-initial.options [4]
 path<-sub("functional_enrichment.r","",path)
 print(path)
-
-# preset path to required files, path can also be specified as argument
-copref_path<-paste(path,"CopraRNA_available_organisms.txt",sep="")
 
 load("copra_results_all.Rdata")
 all_orgs<-names(copra_results)
@@ -34,6 +31,11 @@ if(length(args)>0){
 
 num<-as.numeric(num)
 
+
+# preset path to required files, path can also be specified as argument
+copref_path<-paste(available_orgs_path,"CopraRNA_available_organisms.txt",sep="")  ########### fix path
+
+
 enrich_list<-vector("list",length(all_orgs))
 names(enrich_list)<-all_orgs
 
@@ -54,7 +56,7 @@ cop<-cop_all[,4:(e-1)]
 # if(length(ab)>0){
 	# cop<-cop[-ab,]
 # }
-gbk<-paste("~/For_CopraRNA2.0/Genomes/",all_orgs[i],".gb.gz",sep="")
+gbk<-paste(genomes_path,all_orgs[i],".gb.gz",sep="")
 gbk1<-readLines(gbk)
 org<-grep("ORGANISM",gbk1)
 org<-gbk1[org]
