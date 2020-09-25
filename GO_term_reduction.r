@@ -3,14 +3,15 @@ require(GOSemSim)
 require(org.EcK12.eg.db)
 require(ggplot2)
 require(ggtree)
-
-
+require(AnnotationForge)
+require(genbankr)
+require(topGO)
 load("enrichment.Rdata")
 load("16S_rooted_tree.Rdata")
 weight<-read.csv("weights.txt", sep="\t")
 
 
-#R --slave -f /home/jens/CopraRNA-git/coprarna_aux/GO_term_reduction.r --args 
+#R --slave -f /home/jens/CopraRNA-git/coprarna_aux/GO_term_reduction.r --args available_orgs_path=  genomes_path=~/media/jens@margarita/For_CopraRNA2.0/Genomes/ 
 
 # get absolute path  
 #path="/home/jens/CopraRNA-git/coprarna_aux/"
@@ -19,9 +20,6 @@ path<-initial.options [4]
 path<-sub("GO_term_reduction.r","",path)
 print(path)
 
-# preset path to required files, path can also be specified as argument
-copref_path<-paste(path,"CopraRNA_available_organisms.txt",sep="")
-copref<-read.delim(copref_path, sep="\t", header=T,comment.char = "#")	
 
 # parameters for term reduction
 thres<-0.05		# threshold for enrichment p-Value
@@ -43,6 +41,11 @@ if(length(args)>0){
 		assign(as.character(temp1),temp2)
 	}
 }
+
+# preset path to required files, path can also be specified as argument
+copref_path<-paste(available_orgs_path,"CopraRNA_available_organisms.txt",sep="")
+copref<-read.delim(copref_path, sep="\t", header=T,comment.char = "#")	
+
 
 thres<-as.numeric(thres)
 max_num<-as.numeric(max_num)
@@ -124,7 +127,64 @@ for(i in ord){
 	ord2<-c(ord2,nam2[p])
 }
 
+##########
+ooi<-readLines("ncrna.fa")
+ooi<-gsub(">ncRNA_","",ooi[1])
+gbk<-paste(genomes_path,ooi,".gb.gz",sep="")
+gbk1<-readLines(gbk)
+org<-grep("ORGANISM",gbk1)
+org<-gbk1[org]
+org<-gsub(".*ORGANISM. ","",org)
+org<-gsub(" .*","",org)
+gb<-readGenBank(gbk)
 
+cd<-cds(gb)
+cd<-GenomicRanges::mcols(cd)
+
+## Now prepare some data.frames
+fSym <- cd[,c(3,2)]
+fSym<-cbind(seq(1:nrow(cd)),seq(1:nrow(cd)),fSym)
+colnames(fSym) <- c("GID","ENTREZID","SYMBOL","GENENAME")
+
+fChr <- cbind(1:nrow(cd), rep(1,nrow(cd)))
+fChr<-data.frame(GID=as.integer(fChr[,1]),CHROMOSOME=fChr[,2])
+colnames(fChr) <- c("GID","CHROMOSOME")
+
+
+anno<-enrich_list[[ooi]][[4]]
+
+fGO<-c()
+for(i in 1:nrow(fSym)){
+	pos<-na.omit(match(fSym[i,3],anno[,13]))
+	if(length(pos)>0){
+		go<-anno[pos,2]
+		go<-strsplit(go, split="; ")[[1]]
+		tmp<-cbind(rep(i,length(go)),go)
+		fGO<-rbind(fGO,tmp)
+	}
+}
+fGO<-data.frame(GID=as.integer(fGO[,1]),GO=fGO[,2], EVIDENCE=rep("NO",nrow(fGO)))
+
+
+
+## Then call the function
+makeOrgPackage(gene_info=fSym, chromosome=fChr, go=fGO,
+               version="0.1",
+               maintainer="Some One <so@someplace.org>",
+               author="Some One <so@someplace.org>",
+               outputDir = ".",
+               tax_id="blabla",
+               genus="A",
+               species="B",
+               goTable="go")
+install.packages("./org.AB.eg.db", repos=NULL)
+require(org.AB.eg.db)
+
+
+
+
+
+#############
 
 term_list<-list()
 go<-c("BP","MF","CC")
@@ -133,7 +193,8 @@ node<-setdiff(tree[[1]][,1],tree[[1]][,2])  # root node
 for(ii in 1:3){
 
 
-ecoGO <- godata("org.EcK12.eg.db", ont=go[ii])
+ecoGO <- godata("org.AB.eg.db", ont=go[ii])
+
 
 IC<-c(ecoGO@IC)
 
@@ -199,7 +260,7 @@ names(IC_temp)[na]<-"GO:1905039"
 IC_temp[na]<-0
 sim <- mgoSim(term2, term2,
                   semData=ecoGO,
-                  measure="Jiang",
+                  measure="Wang",#Jiang
                   combine=NULL)
 res<-data.frame(ID=term2,term,pVAL=pval,count=(numbers)[ma], IC=IC_temp)
 res[which(is.finite(res$IC)==F),"IC"]<-max(is.finite(res$IC))
@@ -208,7 +269,7 @@ full_anno<-c()
 for(i in 1:length(enrich_list)){
 	tmp3<-enrich_list[[i]][[1]][[ii]]
 	if(is.null(tmp3)==F){
-		full_anno<-rbind(full_anno,tmp3)
+		full_anno<-rbind(full_anno,as.matrix(tmp3))
 	}
 }
 
@@ -349,17 +410,21 @@ out<-matrix(,0,4)
 colnames(out)<-c("term","org","num","pvalue")
 	for(i in 1:length(term)){
 		for(j in selection){
-			tmp<-rbind(enrich_list[[j]][[1]][[1]],enrich_list[[j]][[1]][[2]],enrich_list[[j]][[1]][[3]])
-			pos<-na.omit(match(term[i], tmp[,2]))
-			tmp2<-c()
-			if(length(pos)>0){
-				tmp2[1]<-term[i]
-				p<-grep(j,nam2)
-				tmp2[2]<-nam2[p]
-				tmp2[3]<-tmp[pos,"Significant"]
-				tmp2[4]<-tmp[pos,"classicFS"]
-				out<-rbind(out,tmp2)
-			}			
+			if(is.element(j,names(enrich_list))){
+				if(is.null(enrich_list[[j]])==F){
+					tmp<-rbind(as.matrix(enrich_list[[j]][[1]][[1]]),as.matrix(enrich_list[[j]][[1]][[2]]),as.matrix(enrich_list[[j]][[1]][[3]]))
+					pos<-na.omit(match(term[i], tmp[,2]))
+					tmp2<-c()
+					if(length(pos)>0){
+						tmp2[1]<-term[i]
+						p<-grep(j,nam2)
+						tmp2[2]<-nam2[p]
+						tmp2[3]<-tmp[pos,"Significant"]
+						tmp2[4]<-tmp[pos,"classicFS"]
+						out<-rbind(out,tmp2)
+					}	
+				}
+			}
 		}
 	}
 rownames(out)<-1:nrow(out)
