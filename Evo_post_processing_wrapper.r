@@ -9,10 +9,10 @@ python3 ~/media/jens@margarita/Syntney/Syntney.py -i ~/media/jens@margarita/Copr
 python3 ~/media/jens@margarita/Syntney/Syntney.py -i [path to GLASSgo fasta]  -o [path to output folder] -n cys -r off -d [path to Syntney database] -c [./Syntney/packages/Rscript/Synteny_Cluster_Script_sqlite.r]  -s [./Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py]
 
 ### annotate and reduce network
-R --slave -f  ~/media/jens@margarita/Syntney/packages/Rscript/network_modifications.r --args working_directory="" only_sig_nodes=TRUE max_synt=20 thres_anno=0.025 thres_edge=0.025
+R --slave -f  ~/media/jens@margarita/sRNA_scripts/network_modifications2.r --args script_path=~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/Syntney_db/synt.db filename=~/media/jens@margarita/Copra2_paper/Glassgo/RyhB/RyhB_ref2.fa working_directory=~/media/jens@margarita/Copra2_paper/Glassgo/RyhB/ only_sig_nodes=TRUE thres_anno=0.001 thres_edge=0.001
 
 ### select representative homologs, draw sRNA/Synteny distribution tree, draw promoter/sRNA weblogo, draw linear syntenies of representative candidates
-R --slave -f  ~/media/jens@margarita/Syntney/packages/Rscript/sRNA_promoter_conservation.r --args filename=~/media/jens@margarita/Syntney/testfiles/inputForJens.fasta  synteny_window=5000 script_path=~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/Syntney/new.db
+R --slave -f  ~/media/jens@margarita/sRNA_scripts/sRNA_promoter_conservation.r --args filename=~/media/jens@margarita/Syntney/testfiles/inputForJens.fasta  synteny_window=5000 script_path=~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/Syntney/new.db wildcard_ids=NC_000913,NC_004347,NC_002505,NZ_CP006870,NC_010465,NC_016810,NC_014228,NC_011312
 
 
 
@@ -86,11 +86,12 @@ R --slave -f ~/media/jens@margarita/CopraRNA-git/coprarna_aux/tree_based_overlap
 load("copra_results_all.Rdata")
 load("target_overlap.Rdata")
 load("16S_rooted_tree.Rdata")
+ref<-read.csv("CopraRNA2_prep_anno_addhomologs_padj_amountsamp.csv",sep=",")
 
 cop<-copra_results[[1]]
-thres<-0.8
+thres<-0.4
 thres2<-0.15
-node<-156 #156 #161
+node<-216 #156 #161
 compare_node<-161
 overlaps<-a[[1]][[as.character(node)]][[2]]
 overlaps<-sort(overlaps, decreasing=T)
@@ -103,6 +104,17 @@ overlaps2_comp<-names(overlaps_comp)[which(overlaps_comp<thres2)]
 unique_tars<-intersect(overlaps2,overlaps2_comp)
 
 most_conserved_targets<-cbind(cop[match(overlaps2,cop[,"initial_sorting"]),4], overlaps[which(overlaps>=thres)],overlaps2)
+rownames(most_conserved_targets)<-overlaps2
+ex<-which(is.na(most_conserved_targets[,1]))
+ex<-(overlaps2[ex])
+if(length(ex)>0){
+	for(i in 1:length(ex)){
+		
+		tmp<-ref[as.numeric(ex[i]),3:ncol(ref)]
+		pos<-which(tmp!="")[1]
+		most_conserved_targets[as.character(ex[i]),1]<-as.character(tmp[pos])
+	}
+}
 most_conserved_targets
 
 unique_tars<-cbind(cop[match(unique_tars,cop[,"initial_sorting"]),4],unique_tars)
