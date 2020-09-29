@@ -131,7 +131,7 @@ overlaps<-sort(overlaps, decreasing=T)
 overlaps2<-names(overlaps)
 
 
-hh<-cbind(cop2[match(overlaps2,cop2[,"initial_sorting"]),"NC_000913"], overlaps,overlaps2)
+hh<-cbind(cop2[match(overlaps2,cop2[,"initial_sorting"]),ooi], overlaps,overlaps2)
 
 
 hh<-hh[match(sel,gsub(" ","",hh[,3])),]
