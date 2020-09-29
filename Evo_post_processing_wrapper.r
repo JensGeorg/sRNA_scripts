@@ -12,12 +12,14 @@ python3 ~/media/jens@margarita/Syntney/Syntney.py -i [path to GLASSgo fasta]  -o
 R --slave -f  ~/media/jens@margarita/sRNA_scripts/network_modifications2.r --args script_path=~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/Syntney_db/synt.db filename=~/media/jens@margarita/Copra2_paper/Glassgo/RyhB/RyhB_ref2.fa working_directory=~/media/jens@margarita/Copra2_paper/Glassgo/RyhB/ only_sig_nodes=TRUE thres_anno=0.001 thres_edge=0.001
 
 ### select representative homologs, draw sRNA/Synteny distribution tree, draw promoter/sRNA weblogo, draw linear syntenies of representative candidates
-R --slave -f  ~/media/jens@margarita/sRNA_scripts/sRNA_promoter_conservation.r --args filename=~/media/jens@margarita/Syntney/testfiles/inputForJens.fasta  synteny_window=5000 script_path=~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/Syntney/new.db wildcard_ids=NC_000913,NC_004347,NC_002505,NZ_CP006870,NC_010465,NC_016810,NC_014228,NC_011312
+R --slave -f  ~/media/jens@margarita/sRNA_scripts/sRNA_promoter_conservation.r --args  synteny_window=5000  wildcard_ids=NC_000913,NC_004347,NC_002505,NZ_CP006870,NC_010465,NC_016810,NC_014228,NC_011312
 
 
-
+thres_val<-0.001
+max_orgs<-250
 # Script runs after a standard CopraRNA run
 
+R --slave -f ~/sRNA_scripts/coprarna_selection_new.r --args max_orgs=180 thres_val=0.001 wilcard=NC_004347,NC_002505,NZ_CP006870,NC_010465,NC_016810,NC_014228,NC_011312 cop_path=~/CopraRNA-git/update_kegg2refseq/run/CopraRNA_available_organisms.txt name=RyhB ooi=NC_000913
 
 
 
@@ -91,8 +93,8 @@ ref<-read.csv("CopraRNA2_prep_anno_addhomologs_padj_amountsamp.csv",sep=",")
 cop<-copra_results[[1]]
 thres<-0.4
 thres2<-0.15
-node<-216 #156 #161
-compare_node<-161
+node<-156 #156 #161
+compare_node<-216
 overlaps<-a[[1]][[as.character(node)]][[2]]
 overlaps<-sort(overlaps, decreasing=T)
 overlaps_comp<-a[[1]][[as.character(compare_node)]][[2]]
@@ -117,14 +119,24 @@ if(length(ex)>0){
 }
 most_conserved_targets
 
-unique_tars<-cbind(cop[match(unique_tars,cop[,"initial_sorting"]),4],unique_tars)
-unique_tars
-
+unique_tars2<-cbind(cop[match(unique_tars,cop[,"initial_sorting"]),4],unique_tars)
+rownames(unique_tars2)<-unique_tars
+ex<-which(is.na(unique_tars2[,1]))
+ex<-(unique_tars[ex])
+if(length(ex)>0){
+	for(i in 1:length(ex)){
+		
+		tmp<-ref[as.numeric(ex[i]),3:ncol(ref)]
+		pos<-which(tmp!="")[1]
+		unique_tars2[as.character(ex[i]),1]<-as.character(tmp[pos][1,1])
+	}
+}
+unique_tars2
 
 node<-101 #156 #161
 compare_node<-117
-thres<-0.1
-thres2<-0.4
+thres<-0.8
+thres2<-0.3
 overlaps<-a[[1]][[as.character(node)]][[2]]
 overlaps<-sort(overlaps, decreasing=T)
 overlaps_comp<-a[[1]][[as.character(compare_node)]][[2]]
