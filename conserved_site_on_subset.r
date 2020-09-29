@@ -62,10 +62,12 @@ registerDoMC(max_cores)
 top<-as.numeric(gsub("top count:","",co[grep("top count:", co)]))
 
 # IntaRNA parameters
-winsize<-as.numeric(gsub("win size:","",co[grep("win size:", co)]))
-maxbpdist<-as.numeric(gsub("max bp dist:","",co[grep("max bp dist:", co)]))
-maxbpdist<-as.numeric(gsub("max bp dist:","",co[grep("max bp dist:", co)]))
-temperature<-as.numeric(gsub("temperature:","",co[grep("temperature:", co)]))
+par_file<-gsub("intarnaOptions:","",co[grep("intarnaOptions:", co)])
+
+# winsize<-as.numeric(gsub("win size:","",int_opts[grep("win size:", int_opts)]))
+# maxbpdist<-as.numeric(gsub("max bp dist:","",int_opts[grep("max bp dist:", int_opts)]))
+# maxbpdist<-as.numeric(gsub("max bp dist:","",int_opts[grep("max bp dist:", int_opts)]))
+# temperature<-as.numeric(gsub("temperature:","",int_opts[grep("temperature:", int_opts)]))
 
 
 # method to calculate pyhlogentic weights from the 16S alignment. "clustal" = ClustalW method, "copra" = CopraRNA_1 method
@@ -1740,7 +1742,8 @@ dat<-cbind(dat,sel)
 
 					
 					# run IntaRNA for spot probabilities
-					temp_table<-paste("IntaRNA  --target ",tab[j,"seq_mrna"] , " --tAccW " ,winsize, " --tAccL ",maxbpdist, " --query ",tab[j,"seq_srna"]," --qAccW ", winsize, " --qAccL ", maxbpdist, " --temperature ", temperature, " --parameterFile ", par_file, " --out /dev/null --out=SpotProb:STDOUT", sep="")
+					#temp_table<-paste("IntaRNA  --target ",tab[j,"seq_mrna"] , " --tAccW " ,winsize, " --tAccL ",maxbpdist, " --query ",tab[j,"seq_srna"]," --qAccW ", winsize, " --qAccL ", maxbpdist, " --temperature ", temperature, " --parameterFile ", par_file, " --out /dev/null --out=SpotProb:STDOUT", sep="")
+					temp_table<-paste("IntaRNA  --target ",tab[j,"seq_mrna"] ,  " --query ",tab[j,"seq_srna"], " --parameterFile ", par_file, " --out /dev/null --out=SpotProb:STDOUT", sep="")
 					temp_table<-as.matrix(read.csv(textConnection(system(temp_table,intern=T)),sep=";", row.names=1,comment.char = "#"))
 					temp_align_table2<-temp_align_table
 					mRNA_no_gaps<-eval(parse( text=paste("c(",tab_aligned[j,"gaps_mRNA"],")",sep="") ))
