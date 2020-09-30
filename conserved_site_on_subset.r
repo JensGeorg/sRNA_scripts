@@ -1867,8 +1867,14 @@ dat<-cbind(dat,sel)
 						ooi_int<-as.character(tab_aligned[ooi_pos,"cluster_id"])
 						peaks<-unlist(unique(c(ooi_int,peaks)))
 						colo4<-colo3
-						colo3<-gsub("#","",unique(c(colo3[ooi_int],colo3)))
+						colo3<-gsub("#","",(c(colo3[ooi_int],colo3)))
+						dup<-which(duplicated(colo3))
+						if(length(dup)>0){
+							colo3<-colo3[-dup]
+						}
+						nam<-names(colo3)
 						colo3<-paste("#",colo3, sep="")
+						names(colo3)<-nam
 					}
 					na<-which(is.na(peaks))
 					if(length(na)>0){
