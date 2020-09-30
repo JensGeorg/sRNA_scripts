@@ -38,8 +38,9 @@ if(length(args)>0){
 
 sel<-strsplit(sel,split=",")[[1]]
 sel<-as.numeric(sel)
+#R --slave -f /home/jens/CopraRNA-git/coprarna_aux/conserved_site_on_subset.r --args ooi=NC_000911 sel=10836,12682,12166,10810,11659,13432,12099,12247,12267,12453,10453,13292,12882,11396,12443,2171,11690,10726,11535,1203,12702,1515
 
-
+ref<-read.csv("CopraRNA2_prep_anno_addhomologs_padj_amountsamp.csv",sep=",")
 
 load("16S_rooted_tree.Rdata")
 load("gene_out.Rdata")
@@ -131,17 +132,35 @@ overlaps<-sort(overlaps, decreasing=T)
 overlaps2<-names(overlaps)
 
 
-hh<-cbind(cop2[match(overlaps2,cop2[,"initial_sorting"]),ooi], overlaps,overlaps2)
+#hh<-cbind(cop2[match(overlaps2,cop2[,"initial_sorting"]),ooi], overlaps,overlaps2)
+e<-which(colnames(ref)=="Annotation")-1
+pos<-match(sel,as.numeric(overlaps2))
+hh<-cbind(ref[sel,3:e], overlaps[pos],as.numeric(overlaps2[pos]))
+nam<-c()
+for(i in 1:nrow(hh)){
+	tmp<-gsub(".*\\(","",hh[i,1:(ncol(hh)-3)])
+	tmp<-gsub("\\|.*","",tmp)
+	na<-which(tmp!="N/A" & tmp!= "")
+	if(length(na)==0){
+		tmp<-gsub("\\(.*","",hh[i,1:(ncol(hh)-3)])
+		na<-which(tmp!="N/A" & tmp!= "")
+		if(length(na)==0){
+			tmp<-hh[i,ncol(hh)]
+			na<-1
+		}
+	} 
+	
+	nam<-c(nam,tmp[na[1]])
+}	
 
-
-hh<-hh[match(sel,gsub(" ","",hh[,3])),]
 inner<-unique(tree[[1]][,1])
 sel2<-which(inner==node)
 leaf<-leafs(inner[sel2], tree)
 leaf<-tree[[3]][leaf]
 selection<-leaf
-nam<-gsub(".*\\(","",hh[,1])
-nam<-gsub("\\|.*","",nam)
+
+
+
 out_num<-matrix(,nrow(hh),length(selection))
 colnames(out_num)<-selection
 rownames(out_num)<-nam
@@ -149,31 +168,31 @@ rownames(out_num)<-nam
 
 
 
-for(i in 1:nrow(hh)){
-	if(is.na(nam[i])){
-		tmp<-NA
-		j<-1
-		while(is.na(tmp) & j<=length(selection)){
-			tmp<-match(hh[i,3], copra_results[[selection[j]]][,"initial_sorting"])
-			j<-j+1
-		}
-		if(is.na(tmp)==F){
-			tmp<-copra_results[[selection[j-1]]][tmp,]
-			e<-grep("Annotation", names(tmp))
-			tmp<-tmp[4:(e-1)]
-			tmp<-tmp[which(tmp!="")]
-			gene<-gsub(".*\\(","",tmp)
-			gene<-unlist(lapply(gene, function(x){return(strsplit(x,"\\|")[[1]][1])}))
-			locus<-gsub("\\(.*","",tmp)
-			ge<-which(gene!="N/A")
-			if(length(ge)>0){
-				nam[i]<-gene[ge[1]]
-			} else {
-				nam[i]<-locus[1]
-			}
-		}
-	}
-}
+# for(i in 1:nrow(hh)){
+	# if(is.na(nam[i])){
+		# tmp<-NA
+		# j<-1
+		# while(is.na(tmp) & j<=length(selection)){
+			# tmp<-match(hh[i,3], copra_results[[selection[j]]][,"initial_sorting"])
+			# j<-j+1
+		# }
+		# if(is.na(tmp)==F){
+			# tmp<-copra_results[[selection[j-1]]][tmp,]
+			# e<-grep("Annotation", names(tmp))
+			# tmp<-tmp[4:(e-1)]
+			# tmp<-tmp[which(tmp!="")]
+			# gene<-gsub(".*\\(","",tmp)
+			# gene<-unlist(lapply(gene, function(x){return(strsplit(x,"\\|")[[1]][1])}))
+			# locus<-gsub("\\(.*","",tmp)
+			# ge<-which(gene!="N/A")
+			# if(length(ge)>0){
+				# nam[i]<-gene[ge[1]]
+			# } else {
+				# nam[i]<-locus[1]
+			# }
+		# }
+	# }
+# }
 
 na<-which(is.na(nam))
 if(length(na)>0){
@@ -193,13 +212,16 @@ for(i in 1:nrow(hh)){
 		org<-c(org,nam2[or])
 		
 		
-		tmp<-match(hh[i,3], copra_results[[selection[j]]][,"initial_sorting"])
+		tmp<-match(hh[i,ncol(hh)], as.numeric(copra_results[[selection[j]]][,"initial_sorting"]))
+		if(is.na(tmp)==F){
+		print(j)
+		}
 		ranks<-c(ranks,tmp)
 		genes<-c(genes,nam[i])
 		
-		int<-int_sites[[as.numeric(gsub(" ","",hh[i,3]))]]
-		peaks_all<-peak_list[[as.numeric(gsub(" ","",hh[i,3]))]]
-		colo4<-col_list[[as.numeric(gsub(" ","",hh[i,3]))]]
+		int<-int_sites[[as.numeric(gsub(" ","",hh[i,ncol(hh)]))]]
+		peaks_all<-peak_list[[as.numeric(gsub(" ","",hh[i,ncol(hh)]))]]
+		colo4<-col_list[[as.numeric(gsub(" ","",hh[i,ncol(hh)]))]]
 		
 		if(length(peaks_all)>0){
 		
@@ -216,10 +238,11 @@ for(i in 1:nrow(hh)){
 			color<-c(color, "#b0b0b0")
 		} else {
 			tmp_col<-match(int1, names(colo4))
-			if(length(tmp_col)>1){
-				print(c(i,j))
+			if(is.na(tmp_col)){
+				color<-c(color, "#b0b0b0")
+			} else {
+				color<-c(color, colo4[tmp_col])
 			}
-			color<-c(color, colo4[tmp_col])
 		}
 		} else {
 			color<-c(color, "#b0b0b0")
@@ -233,13 +256,17 @@ ranks2<-ranks
 ranks2[which(ranks<=num)]<-num-as.numeric(as.character(ranks2[which(ranks<=num)]))
 ranks2[which(ranks>num)]<-0.01
 
+mi<-which(is.na(ranks2)==F & is.na(color)==T) 
+if(length(mi)>0){
+	color[mi]<-1
+}
 cols<-unique(color)
 names(cols)<-1:length(cols)
 for(i in 1:length(cols)){
 	color[grep(cols[i],color)]<-i
 }
 
-out3<-data.frame(org=org,genes=genes,ranks=ranks2, color=color, ori_ranks=ranks)
+out3<-data.frame(org=as.character(org),genes=genes,ranks=ranks2, color=color, ori_ranks=ranks)
 
 
 d = fortify(tree)

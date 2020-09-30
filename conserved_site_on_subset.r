@@ -48,7 +48,7 @@ path<-sub("conserved_site_on_subset.r","",path)
 # preset path to required files, path can also be specified as argument
 copref_path<-paste(path,"CopraRNA_available_organisms.txt",sep="")
 dialign_conf<-paste(path,"dialign_conf/",sep="")
-par_file<-paste(path,"intarna_options.cfg",sep="")
+#par_file<-paste(path,"intarna_options.cfg",sep="")
 
 # read the organism of interest (ooi) from the ncRNA fasta file. The sRNA of the ooi is considered to be the first sequence.
 ooi<-gsub("ncRNA_","",names(read.fasta("ncrna.fa"))[1])
@@ -62,7 +62,7 @@ registerDoMC(max_cores)
 top<-as.numeric(gsub("top count:","",co[grep("top count:", co)]))
 
 # IntaRNA parameters
-par_file<-gsub("intarnaOptions:","",co[grep("intarnaOptions:", co)])
+par_file<-gsub("intarnaOptions=","",co[grep("intarnaOptions=", co)])
 
 # winsize<-as.numeric(gsub("win size:","",int_opts[grep("win size:", int_opts)]))
 # maxbpdist<-as.numeric(gsub("max bp dist:","",int_opts[grep("max bp dist:", int_opts)]))
@@ -130,13 +130,14 @@ jalview_anno<-function(tab_aligned, tabsub_aligned,peaks1,test, ooi=conservation
 		ooi_int<-as.character(tab_aligned[ooi_pos,"cluster_id"])
 		peaks<-unlist(unique(c(ooi_int,peaks)))
 		colo4<-colo3
-		colo3<-gsub("#","",unique(c(colo3[ooi_int],colo3)))
+		
 	}
 	na<-which(is.na(peaks))
 	if(length(na)>0){
 		peaks<-peaks[-na]
 		colo3<-colo3[-na]
 	}
+	colo3<-gsub("#","",colo3)
 	anno_mRNA<-paste(peaks, "\t", colo3, sep="")
 	anno_sRNA<-anno_mRNA
 	tab<-tab_aligned
@@ -1176,7 +1177,7 @@ peak_tree<-function(tab_aligned, tabsub_aligned,peaks1,test, ooi=conservation_oo
 	
 	#na<-unlist(intersect(na,na2))
 	if(is.null(na)==F){
-		na<-match(na, fit2$tip.label)
+		na<-match(unlist(na), fit2$tip.label)
 		peak_mat[na,ncol(peak_mat)]<-"A"
 	}
 	if(is.null(na2)==F){
@@ -1839,7 +1840,7 @@ dat<-cbind(dat,sel)
 					peaks_all<-test[[3]]
 					colo4<-NA
 					if(length(peaks_all)>0){
-					if(length(peaks_all)>0){
+						if(length(peaks_all)>0){
 						peaks<-unlist(lapply(peaks1, function(x){return(x[1])}))
 						peaks<-sort(peaks)
 						tab_aligned[,"cluster_id"]<-unlist(lapply(tab_aligned[,"cluster_id"] ,function(x){return(strsplit(as.character(x), split="\\|")[[1]][1])}))
@@ -1867,14 +1868,16 @@ dat<-cbind(dat,sel)
 						peaks<-unlist(unique(c(ooi_int,peaks)))
 						colo4<-colo3
 						colo3<-gsub("#","",unique(c(colo3[ooi_int],colo3)))
+						colo3<-paste("#",colo3, sep="")
 					}
 					na<-which(is.na(peaks))
 					if(length(na)>0){
 						peaks<-peaks[-na]
 						colo3<-colo3[-na]
 					}
-					colo3<-paste("#",colo3, sep="")
+					#colo3<-paste("#",colo3, sep="")
 					}
+					colo4<-colo3
 					col_list[[i]]<-colo4
 				}
 				
