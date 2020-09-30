@@ -22,7 +22,11 @@ copref<-read.delim(copref_path, sep="\t", header=T,comment.char = "#")
 num=200 # maximal CopraRNA rank considered to be a positive prediction
 
 # read the organism of interest (ooi) from the ncRNA fasta file. The sRNA of the ooi is considered to be the first sequence.
-ooi<-gsub("ncRNA_","",names(read.fasta("ncrna.fa"))[1])
+ooi<-readLines("ncrna.fa")
+po<-grep(">ncRNA_",ooi)[1]
+ooi<-gsub(">ncRNA_","",ooi[po])
+
+
 
 
 # transforming arguments in valid variables 
