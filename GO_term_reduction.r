@@ -1,6 +1,6 @@
 require(tidyr)
 require(GOSemSim)
-require(org.EcK12.eg.db)
+#require(org.EcK12.eg.db)
 require(ggplot2)
 require(ggtree)
 require(AnnotationForge)
@@ -141,7 +141,7 @@ gb<-readGenBank(gbk)
 cd<-cds(gb)
 cd<-GenomicRanges::mcols(cd)
 
-## Now prepare some data.frames
+
 fSym <- cd[,c(3,2)]
 fSym<-cbind(seq(1:nrow(cd)),seq(1:nrow(cd)),fSym)
 colnames(fSym) <- c("GID","ENTREZID","SYMBOL","GENENAME")
@@ -163,6 +163,33 @@ for(i in 1:nrow(fSym)){
 		fGO<-rbind(fGO,tmp)
 	}
 }
+
+if(is.null(fGO)){
+	
+	fSym <- cd[,c(4,2)]
+	fSym<-cbind(seq(1:nrow(cd)),seq(1:nrow(cd)),fSym)
+	colnames(fSym) <- c("GID","ENTREZID","SYMBOL","GENENAME")
+	
+	dup<-which(duplicated(unlist(fSym[,3])))
+	if(length(dup)>0){
+		fSym<-fSym[-dup,]
+	}
+	 fChr <- cbind(fSym[,1], rep(1,nrow(fSym)))
+	 fChr<-data.frame(GID=as.integer(fChr[,1]),CHROMOSOME=fChr[,2])
+	 colnames(fChr) <- c("GID","CHROMOSOME")
+	
+	fGO<-c()
+	for(i in 1:nrow(fSym)){
+		pos<-na.omit(match(unlist(fSym[i,3]),anno[,13]))
+		if(length(pos)>0){
+			go<-anno[pos,2]
+			go<-strsplit(go, split="; ")[[1]]
+			tmp<-cbind(rep(i,length(go)),go)
+			fGO<-rbind(fGO,tmp)
+		}
+	}
+
+}
 fGO<-data.frame(GID=as.integer(fGO[,1]),GO=fGO[,2], EVIDENCE=rep("NO",nrow(fGO)))
 
 
@@ -177,7 +204,7 @@ makeOrgPackage(gene_info=fSym, chromosome=fChr, go=fGO,
                genus="A",
                species="B",
                goTable="go")
-install.packages("./org.AB.eg.db", repos=NULL)
+install.packages("./org.ff.eg.db", repos=NULL)
 require(org.AB.eg.db)
 
 
