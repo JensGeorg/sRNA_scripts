@@ -204,7 +204,7 @@ makeOrgPackage(gene_info=fSym, chromosome=fChr, go=fGO,
                genus="A",
                species="B",
                goTable="go")
-install.packages("./org.ff.eg.db", repos=NULL)
+install.packages("./org.AB.eg.db", repos=NULL)
 require(org.AB.eg.db)
 
 
