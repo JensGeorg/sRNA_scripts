@@ -1,6 +1,6 @@
 require(tidyr)
 require(GOSemSim)
-#require(org.EcK12.eg.db)
+require(org.EcK12.eg.db)
 require(ggplot2)
 require(ggtree)
 require(AnnotationForge)
@@ -142,13 +142,32 @@ cd<-cds(gb)
 cd<-GenomicRanges::mcols(cd)
 
 
-fSym <- cd[,c(3,2)]
-fSym<-cbind(seq(1:nrow(cd)),seq(1:nrow(cd)),fSym)
-colnames(fSym) <- c("GID","ENTREZID","SYMBOL","GENENAME")
 
-fChr <- cbind(1:nrow(cd), rep(1,nrow(cd)))
-fChr<-data.frame(GID=as.integer(fChr[,1]),CHROMOSOME=fChr[,2])
-colnames(fChr) <- c("GID","CHROMOSOME")
+	fSym<-cbind(seq(1:nrow(cd)),seq(1:nrow(cd)),toupper(as.character(cd[,3])),as.character(cd[,2]))
+	colnames(fSym) <- c("GID","ENTREZID","SYMBOL","GENENAME")
+	
+	dup<-which(duplicated(unlist(fSym[,3])))
+	if(length(dup)>0){
+		fSym<-fSym[-dup,]
+	}
+	na<-which(is.na(unlist(fSym[,1])))
+	if(length(na)>0){
+		fSym<-fSym[-na,]
+	}
+	na<-which(is.na(fSym[,3]))
+	 if(length(na)>0){
+		fSym<-fSym[-na,]
+	 }
+	na<-which(is.na(fSym[,4]))
+	 if(length(na)>0){
+		fSym[na,4]<-"DD"
+	 }
+	 fSym<-data.frame(GID=as.integer(fSym[,1]),ENTREZID=as.integer(fSym[,1]),SYMBOL=as.character(fSym[,3]),GENENAME=as.character(fSym[,4]),stringsAsFactors =F)
+	 
+	 
+	 fChr <- cbind(fSym[,1], rep(1,nrow(fSym)))
+	 fChr<-data.frame(GID=as.integer(fChr[,1]),CHROMOSOME=fChr[,2])
+	 colnames(fChr) <- c("GID","CHROMOSOME")
 
 
 anno<-enrich_list[[ooi]][[4]]
@@ -167,20 +186,35 @@ for(i in 1:nrow(fSym)){
 if(is.null(fGO)){
 	
 	fSym <- cd[,c(4,2)]
-	fSym<-cbind(seq(1:nrow(cd)),seq(1:nrow(cd)),fSym)
+	fSym<-cbind(seq(1:nrow(cd)),seq(1:nrow(cd)),toupper(as.character(cd[,4])),as.character(cd[,2]))
 	colnames(fSym) <- c("GID","ENTREZID","SYMBOL","GENENAME")
 	
 	dup<-which(duplicated(unlist(fSym[,3])))
 	if(length(dup)>0){
 		fSym<-fSym[-dup,]
 	}
+	na<-which(is.na(unlist(fSym[,1])))
+	if(length(na)>0){
+		fSym<-fSym[-na,]
+	}
+	na<-which(is.na(fSym[,3]))
+	 if(length(na)>0){
+		fSym<-fSym[-na,]
+	 }
+	na<-which(is.na(fSym[,4]))
+	 if(length(na)>0){
+		fSym[na,4]<-"DD"
+	 }
+	 fSym<-data.frame(GID=as.integer(fSym[,1]),ENTREZID=as.integer(fSym[,1]),SYMBOL=as.character(fSym[,3]),GENENAME=as.character(fSym[,4]),stringsAsFactors =F)
+	 
+	 
 	 fChr <- cbind(fSym[,1], rep(1,nrow(fSym)))
 	 fChr<-data.frame(GID=as.integer(fChr[,1]),CHROMOSOME=fChr[,2])
 	 colnames(fChr) <- c("GID","CHROMOSOME")
 	
 	fGO<-c()
 	for(i in 1:nrow(fSym)){
-		pos<-na.omit(match(unlist(fSym[i,3]),anno[,13]))
+		pos<-na.omit(match(unlist(fSym[i,3]),toupper(anno[,13])))
 		if(length(pos)>0){
 			go<-anno[pos,2]
 			go<-strsplit(go, split="; ")[[1]]
