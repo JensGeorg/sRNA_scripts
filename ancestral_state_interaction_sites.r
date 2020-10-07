@@ -327,8 +327,8 @@ for(i in 1:length(out_utrs)){
 anc_res<-vector("list", length(fasta_list))
 #names(anc_res)<-gene1
 gggg<-c(15,18,21,23,24)
-#for(iii in 1:length(fasta_list)){
-for(iii in gggg){
+for(iii in 1:length(fasta_list)){
+#for(iii in gggg){
 
 
 write.fasta(fasta_list[[iii]],file="temp.fa" ,names=names(fasta_list[[iii]]))	
