@@ -78,8 +78,8 @@ for(i in 1:length(anc_res)){
 	if(aligned==T){
 	n1<-ggtree(tree) + geom_tiplab(size=2,hjust=-0.04, align = TRUE, linetype = 'dotted', linesize = 0.05,) +  coord_cartesian(clip = 'off') + theme_tree2(plot.margin=margin(6, 120, 6, 6)) + ggtitle (names(anc_res)[i])
 	a<-ggplot_build(n1)
-	dis_a<-a[[1]][[3]][1,3]
-	dis_b<-a[[1]][[4]][1,2]
+	dis_a<-a[[1]][[3]][1,1]
+	dis_b<-a[[1]][[4]][1,1]
 	dis_c<-dis_b-dis_a
 	command1<-paste("p<-ggtree(tree) %<+% d1 %<+% d2 + geom_tiplab(hjust=-",20*dis_c,", size=2,align = TRUE, linetype = 'dotted', linesize = 0.05) + coord_cartesian(clip = 'off') + theme_tree2(plot.margin=margin(6, 120, 6, 6))",sep="")
 
@@ -97,12 +97,12 @@ for(i in 1:length(anc_res)){
 	#command1<-paste("p<-ggtree(tree) %<+% d1 %<+% d2 + geom_tiplab( size=2,align = TRUE, linetype = 'dotted', linesize = 0.05) + coord_cartesian(clip = 'off') + theme_tree2(plot.margin=margin(6, 120, 6, 6))",sep="")
 	#command1<-"p<-ggtree(tree) %<+% d1 %<+% d2 + geom_tiplab(size=2,hjust=-",dis_a*36,, align = TRUE, linetype = 'dotted', linesize = 0.05,) +  coord_cartesian(clip = 'off') + theme_tree2(plot.margin=margin(6, 120, 6, 6))"
 	for(j in 1:(ncol(d1)-1)){
-			tmp<-paste(" + geom_point(aes(shape=X",j,",x=",dis_a,"),size=6,na.rm=T,color=pie1[",j,"],show.legend = F)",sep="")
+			tmp<-paste(" + geom_point(aes(shape=X",j,",x=",dis_a,"),size=3,na.rm=T,color=pie1[",j,"],show.legend = F)",sep="")
 			command1<-paste(command1,tmp,sep="")
 	}
 		
 	for(j in 1:(ncol(d2)-1)){
-			tmp<-paste(" +  geom_point(aes(shape=X",j,"_sub,x=",dis_a+10*dis_c,"),size=6,na.rm=T,color=pie2[",j,"],show.legend = F)",sep="")
+			tmp<-paste(" +  geom_point(aes(shape=X",j,"_sub,x=",dis_a+5*dis_c,"),size=3,na.rm=T,color=pie2[",j,"],show.legend = F)",sep="")
 			command1<-paste(command1,tmp,sep="")
 	}	
 	

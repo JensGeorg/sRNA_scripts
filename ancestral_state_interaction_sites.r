@@ -326,7 +326,7 @@ for(i in 1:length(out_utrs)){
 
 anc_res<-vector("list", length(fasta_list))
 #names(anc_res)<-gene1
-gggg<-c(15,18,21,23,24)
+#gggg<-c(15,18,21,23,24)
 for(iii in 1:length(fasta_list)){
 #for(iii in gggg){
 
@@ -417,12 +417,15 @@ for(i in 1:nrow(int[[1]])){
 		}
 	}
 	pos<-na.omit(match(tree2$tip.label, colnames(int[[1]])))
-	
-	trait_list[[i]]<-data.frame(names(tmp)[pos],tmp_out[pos])
+	#trait_list[[i]]<-data.frame(c(names(tmp)[pos]),c(tmp_out[pos]))
+	trait_list[[i]]<-data.frame(c(names(tmp)[pos],setdiff(tree2$tip.label, colnames(int[[1]]))),c(tmp_out[pos],1))
 }
 
 
 recon3<- rayDISC(tree2,data.frame(trait_list[[iii]]),model="ARD", node.states="marginal", root.p="yang",charnum=1)
+#recon3<- rayDISC(tree2,data.frame(trait_list[[iii]]),model="ARD", node.states="joint")
+#plotRECON(tree2,recon3$states)
+
 
 orgs<-tree2$tip.label
 
@@ -485,21 +488,21 @@ load("target_overlap.Rdata")
 load("16S_rooted_tree.Rdata")
 
 cop<-copra_results[[1]]
-thres<-0.1
-thres2<-0.1
-node<-161
-compare_node<-161
-overlaps<-a[[1]][[as.character(node)]][[2]]
-overlaps<-sort(overlaps, decreasing=T)
-overlaps_comp<-a[[1]][[as.character(compare_node)]][[2]]
-overlaps_comp<-sort(overlaps_comp, decreasing=T)
+# thres<-0.1
+# thres2<-0.1
+# node<-setdiff(tree[[1]][,1],tree[[1]][,2])
+# compare_node<-node
+# overlaps<-a[[1]][[as.character(node)]][[2]]
+# overlaps<-sort(overlaps, decreasing=T)
+# overlaps_comp<-a[[1]][[as.character(compare_node)]][[2]]
+# overlaps_comp<-sort(overlaps_comp, decreasing=T)
 
-overlaps2<-names(overlaps)[which(overlaps>=thres)]
-overlaps2_comp<-names(overlaps_comp)[which(overlaps_comp<thres2)]
+# overlaps2<-names(overlaps)[which(overlaps>=thres)]
+# overlaps2_comp<-names(overlaps_comp)[which(overlaps_comp<thres2)]
 
-unique_tars<-intersect(overlaps2,overlaps2_comp)
+# unique_tars<-intersect(overlaps2,overlaps2_comp)
 
-most_conserved_targets<-cbind(cop[match(overlaps2,cop[,"initial_sorting"]),4], overlaps[which(overlaps>=thres)],overlaps2)
+# most_conserved_targets<-cbind(cop[match(overlaps2,cop[,"initial_sorting"]),4], overlaps[which(overlaps>=thres)],overlaps2)
 
 
 
@@ -534,6 +537,7 @@ for(i in 1:length(anc_res)){
 	if(length(nu)>0){
 		sites<-sites[-nu]
 	}
+	
 	selection<-as.numeric(ini)
 	peaks<-peak_list[selection[i]]
 	if(as.numeric(site)-1>0){
