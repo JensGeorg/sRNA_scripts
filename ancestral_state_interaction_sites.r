@@ -488,21 +488,29 @@ load("target_overlap.Rdata")
 load("16S_rooted_tree.Rdata")
 
 cop<-copra_results[[1]]
-# thres<-0.1
-# thres2<-0.1
-# node<-setdiff(tree[[1]][,1],tree[[1]][,2])
-# compare_node<-node
-# overlaps<-a[[1]][[as.character(node)]][[2]]
-# overlaps<-sort(overlaps, decreasing=T)
-# overlaps_comp<-a[[1]][[as.character(compare_node)]][[2]]
-# overlaps_comp<-sort(overlaps_comp, decreasing=T)
+thres<-0.1
+thres2<-0.1
 
-# overlaps2<-names(overlaps)[which(overlaps>=thres)]
-# overlaps2_comp<-names(overlaps_comp)[which(overlaps_comp<thres2)]
+root<-setdiff(tree[[1]][,1],tree[[1]][,2])
+b<-tree[[1]][which(tree[[1]][,1]==root),2]
+a1<-leafs(b[1],tree)
+a2<-leafs(b[2],tree)
+node<-b[1]
+if(length(a2)>length(a1)){
+	node<-b[2]
+}
+compare_node<-node
+overlaps<-a[[1]][[as.character(node)]][[2]]
+overlaps<-sort(overlaps, decreasing=T)
+overlaps_comp<-a[[1]][[as.character(compare_node)]][[2]]
+overlaps_comp<-sort(overlaps_comp, decreasing=T)
 
-# unique_tars<-intersect(overlaps2,overlaps2_comp)
+overlaps2<-names(overlaps)[which(overlaps>=thres)]
+overlaps2_comp<-names(overlaps_comp)[which(overlaps_comp<thres2)]
 
-# most_conserved_targets<-cbind(cop[match(overlaps2,cop[,"initial_sorting"]),4], overlaps[which(overlaps>=thres)],overlaps2)
+unique_tars<-intersect(overlaps2,overlaps2_comp)
+
+most_conserved_targets<-cbind(cop[match(overlaps2,cop[,"initial_sorting"]),4], overlaps[which(overlaps>=thres)],overlaps2)
 
 
 
