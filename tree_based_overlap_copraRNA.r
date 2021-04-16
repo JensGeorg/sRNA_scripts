@@ -392,6 +392,6 @@ dev.off()
 
 ## plot node reference tree 
 pdf("tree_node_reference.pdf")
-plot(tree2, cex=0.5)
-nodelabels(cex=0.5, frame="none")
+plot(tree2, cex=0.3)
+nodelabels(cex=0.3, frame="none")
 dev.off()

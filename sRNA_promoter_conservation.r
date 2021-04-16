@@ -11,21 +11,23 @@ require(ggtree)
 
 
 #filename<-file('stdin', 'r') # result fasta file from GLASSgo
-filename<-"~/For_CopraRNA2.0/OxyS/IsaR1/clear/IsaR1clear.txt"
-#filename<-"~/media/jens@margarita/Copra2_paper/Glassgo/RyhB/RyhB_ref2.fa"
+#filename<-"~/For_CopraRNA2.0/OxyS/IsaR1/clear/IsaR1clear.txt"
+#filename<-"~/media/jens@margaritaCopra2_paper/Glassgo/RyhB/RyhB_ref2.fa"
 #filename<-"~/Copra2_paper/Glassgo/Spot42/Spot42_rev.fa"
 script_path<-"~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py"
-script_path<-"~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py"
+#script_path<-"~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py"
 #db_path<-"/media/cyano_share/exchange/Jens/Syntney/mySQLiteDB_new.db"
-db_path<-"~/synt.db"
-#db_path<-"~/Syntney_db/synt.db"
+#db_path<-"~/synt.db"
+db_path<-"~/Syntney_db/synt.db"
 threads<-30
 name<-"sRNA"
-write_files<-F
-rRNA_existence_threshold<-0.6
-up<-150
-down<-50
-wildcard_ids<-c("U00096.3","CP003069.1")
+#write_files<-F
+#rRNA_existence_threshold<-0.6
+#up<-150
+#down<-50
+# S. oneidensis, V. cholerae, Aeromonas hydrofila, Y. pseudotubecolosis YPIII, S. enterica, Xenorhabdus Nematophila,  Aliivibrio salmonicida
+wildcard_ids<-c("NC_000913","NC_004347","NC_002505","NZ_CP006870","NC_010465","NC_016810","NC_014228","NC_011312")
+#wildcard_ids<-c("U00096.3","CP003069.1")
 n_orgs_synt<-200
 synteny_window<-5000 # number of bases upstream and downstream of the sRNA that were searched for protein coding genes for the synteny analysis
 thres_val<-0.0001
@@ -38,17 +40,26 @@ for(i in 1:length(args)){
 	temp2<-temp[2]
 	assign(as.character(temp1),temp2)
  }
- 
+ n_orgs_synt<-as.numeric(n_orgs_synt)
 synteny_window<-as.numeric(synteny_window)
 threads<-as.numeric(threads)
-write_files<-as.logical(write_files)
-rRNA_existence_threshold<-as.numeric(rRNA_existence_threshold)
-up<-as.numeric(up)
-down<-as.numeric(down)
+#write_files<-as.logical(write_files)
+#rRNA_existence_threshold<-as.numeric(rRNA_existence_threshold)
+#up<-as.numeric(up)
+#down<-as.numeric(down)
 unspli<-grep(",", wildcard_ids)
 if(length(unspli)>0){
 	wildcard_ids<-strsplit(wildcard_ids,",")[[1]]
 }
+
+load("phylogenetic_weights.Rdata")
+#combined_seqs
+load("combined_seqs.Rdata")
+
+
+load("dist_objects.Rdata")
+dist_ham_srna<-dist_objects[[1]]
+dist_ham_ribo<-dist_objects[[2]]
 
 split_glassgo<-function(x){
 	tmp<-strsplit(x[1], ">")[[1]]
@@ -236,221 +247,239 @@ remove_overlapping_homologs<-function(coor, over_thres=0.5){
 }
 
 # Execute functions
-fasta<-read.delim(filename, header=F, sep="\t")
-closeAllConnections()
-fasta<-as.character(fasta[,1])
-coor<-export_ncRNA_coordinates(fasta)
+# fasta<-read.delim(filename, header=F, sep="\t")
+# closeAllConnections()
+# fasta<-as.character(fasta[,1])
+# coor<-export_ncRNA_coordinates(fasta)
+load("coor.Rdata")
 while(length(which(duplicated(coor[,"ID"])))>0){
 	coor<-remove_overlapping_homologs(coor)
 }
+
+
+
 
 
 n<-sort(table(paste(coor[,1],coor[,"name"],sep="_")))
 n<-cbind(names(n),n)
 
 write.table(n, file="sRNA_per_org.txt", sep="\t")
+#weight_comb
 
-#16S RNA
-orgs<-unique(coor[,1])
-command<-paste("python3 ", script_path, " -s ", db_path, " -rRNA ", paste(orgs, collapse=" "))
-#print(command)
-rRNA<-system(command, intern=T)
-
-startp<-grep(">",rRNA)[1]
-rRNA<-rRNA[startp:length(rRNA)]
-
-empty<-grep("No 16srRNA found !!!!!!!",rRNA)
-empty2<-which(rRNA=="")
-empty<-c(empty,empty2)
-if(length(empty)>0){
-	rRNA<-rRNA[-c(empty-1,empty)]
+ex<-na.omit(match(combined_seqs[,1],coor[,"ID"]))
+if(length(ex)>0){
+	coor<-coor[ex,]
 }
 
 
-# check number of input sequences with coreesponding rRNA
-orgs<-grep(">", rRNA)
-orgs2<-gsub(">","",rRNA[orgs])
-
-
-rRNA2<-c()
-count<-0
-for(i in 1:length(orgs)){
-	tmp<-grep(orgs2[i], coor[,1])
-	if(length(tmp)>0){
-		count<-count+length(tmp)
-		rRNA3<-matrix(,length(tmp),2)
-		for(j in 1:length(tmp)){
-			rRNA3[j,1]<-coor[tmp[j],"Full_header"]
-			rRNA3[j,2]<-rRNA[orgs[i]+1]
-		}
-		rRNA2<-rbind(rRNA2,rRNA3)
-	}
-}
-
-removed2<-c()
-if(count/nrow(coor)>=rRNA_existence_threshold){
-	orgs<-grep(">", rRNA)
-	orgs<-gsub(">","",rRNA[orgs])
-	removed<-c()
-	for(i in 1:nrow(coor)){
-		tmp<-na.omit(match(coor[i,1],orgs))
-		if(length(tmp)==0){
-			removed<-c(removed,i)
-		}
-	}
-	if(length(removed)>0){
-		removed2<-coor[removed,"ID"]
-		coor<-coor[-removed,]
-	}	
-} 
-if(length(removed2)>0){
-	removed2<-cbind(removed2, rep("no_16S_rRNA",length(removed2)))
+ex<-na.omit(match(names(weight_comb),coor[,"ID"]))
+if(length(ex)>0){
+	coor<-coor[ex,]
 }
 
 
-# create bed style file for sequence extraction
 
-bed<-c()
+# #16S RNA
+# orgs<-unique(coor[,1])
+# command<-paste("python3 ", script_path, " -s ", db_path, " -rRNA ", paste(orgs, collapse=" "))
+# #print(command)
+# rRNA<-system(command, intern=T)
 
-for(i in 1:nrow(coor)){
-	if(coor[i,2]=="+"){
-		tmp<-c(coor[i,1],as.numeric(coor[i,3])-up,as.numeric(coor[i,4])+down, coor[i,2])
-	} else {
-		tmp<-c(coor[i,1],as.numeric(coor[i,3])-down,as.numeric(coor[i,4])+up, coor[i,2])
-	}
-	bed<-rbind(bed,tmp)
-}
-tmpf<-tempfile()
-write.table(bed, file=tmpf, quote=F, sep="\t", row.names=F, col.names=F)
-command<-paste("python3 ", script_path, " -s ", db_path, " -pdna ", tmpf, sep="")
-bed2<-system(command, intern=T)
-sta<-grep(">", bed2)[1]
-bed2<-bed2[sta:length(bed2)]
+# startp<-grep(">",rRNA)[1]
+# rRNA<-rRNA[startp:length(rRNA)]
+
+# empty<-grep("No 16srRNA found !!!!!!!",rRNA)
+# empty2<-which(rRNA=="")
+# empty<-c(empty,empty2)
+# if(length(empty)>0){
+	# rRNA<-rRNA[-c(empty-1,empty)]
+# }
 
 
-combined_seqs<-c()
-
-for(i in 1:nrow(coor)){
-	tmp<-c()
-	r<-na.omit(which(paste(">",coor[i,1],sep="")==rRNA)[1])
-	if(length(r)>0){
-		if( rRNA[r+1]!="No 16sRNA sequence found"){
-			tmp<-c(tmp, coor[i,"ID"],coor[i,"Full_header"],coor[i,"sequence"],rRNA[r+1])
-			if(coor[i,2]=="+"){
-				na<-paste(">",coor[i,1],"_",as.numeric(coor[i,3])-up,"_",as.numeric(coor[i,4])+down,sep="")
-			}
-			if(coor[i,2]=="-"){
-				na<-paste(">",coor[i,1],"_",as.numeric(coor[i,3])-down,"_",as.numeric(coor[i,4])+up,sep="")
-			}
-			pr<-na.omit(which(bed2==na)[1])
-			if(length(pr)>0){
-				#print(i)
-				tmp<-c(tmp,bed2[pr+1])		
-				combined_seqs<-rbind(combined_seqs,tmp)
-			}
-		}
-	}
-}
-
-# call mafft for MSA
-mafft<-function(filename="ncrna.fa", outname="ncrna_aligned.fa", mode="fast"){
-	if(mode=="accurate"){
-		command<-paste("mafft --maxiterate 1000 --localpair --quiet --inputorder ", filename, " > ", outname, sep="" )
-	}
-	if(mode=="fast"){
-		command<-paste("mafft --retree 2 --maxiterate 0 --quiet --inputorder ", filename, " > ", outname, sep="" )
-	}
-	if(mode=="very_fast"){
-		command<-paste("mafft --retree 1 --maxiterate 0 --quiet --inputorder ", filename, " > ", outname, sep="" )
-	}
-	system(command)
-} 
+# # check number of input sequences with coreesponding rRNA
+# orgs<-grep(">", rRNA)
+# orgs2<-gsub(">","",rRNA[orgs])
 
 
-tree_weights<-function(tree, method="clustal"){
-	tip<-Ntip(tree)
-	node<-Nnode(tree)
-	di<-dist.nodes(tree)
-	root<-setdiff(tree[[1]][,1],tree[[1]][,2])
-	out<-vector("list",tip)
-	names(out)<-1:tip
-	for(i in 1:tip){
-		temp<-numeric(0)
-		t1<-i
-		while(t1!=(tip+1)){
-			t1<-tree[[1]][which(tree[[1]][,2]==t1),1]
-			temp<-c(temp,t1)
-		}
-		out[[i]]<-temp
-	}
-	count<-table(unlist(out))
-	le<-0
-	for(i in 1:length(count)){
-		t1<-tree[[1]][which(tree[[1]][,2]==as.numeric(names(count)[i])),1]
-		le<-c(le,di[t1,as.numeric(names(count)[i])])
-	}
-	if(method=="clustal"){
-		count<-le/count
-	}
-	if(method=="copra"){
-		names(le)<-names(count)
-		count<-le/2
+# rRNA2<-c()
+# count<-0
+# for(i in 1:length(orgs)){
+	# tmp<-grep(orgs2[i], coor[,1])
+	# if(length(tmp)>0){
+		# count<-count+length(tmp)
+		# rRNA3<-matrix(,length(tmp),2)
+		# for(j in 1:length(tmp)){
+			# rRNA3[j,1]<-coor[tmp[j],"Full_header"]
+			# rRNA3[j,2]<-rRNA[orgs[i]+1]
+		# }
+		# rRNA2<-rbind(rRNA2,rRNA3)
+	# }
+# }
+
+# removed2<-c()
+# if(count/nrow(coor)>=rRNA_existence_threshold){
+	# orgs<-grep(">", rRNA)
+	# orgs<-gsub(">","",rRNA[orgs])
+	# removed<-c()
+	# for(i in 1:nrow(coor)){
+		# tmp<-na.omit(match(coor[i,1],orgs))
+		# if(length(tmp)==0){
+			# removed<-c(removed,i)
+		# }
+	# }
+	# if(length(removed)>0){
+		# removed2<-coor[removed,"ID"]
+		# coor<-coor[-removed,]
+	# }	
+# } 
+# if(length(removed2)>0){
+	# removed2<-cbind(removed2, rep("no_16S_rRNA",length(removed2)))
+# }
+
+
+# # create bed style file for sequence extraction
+
+# bed<-c()
+
+# for(i in 1:nrow(coor)){
+	# if(coor[i,2]=="+"){
+		# tmp<-c(coor[i,1],as.numeric(coor[i,3])-up,as.numeric(coor[i,4])+down, coor[i,2])
+	# } else {
+		# tmp<-c(coor[i,1],as.numeric(coor[i,3])-down,as.numeric(coor[i,4])+up, coor[i,2])
+	# }
+	# bed<-rbind(bed,tmp)
+# }
+# tmpf<-tempfile()
+# write.table(bed, file=tmpf, quote=F, sep="\t", row.names=F, col.names=F)
+# command<-paste("python3 ", script_path, " -s ", db_path, " -pdna ", tmpf, sep="")
+# bed2<-system(command, intern=T)
+# sta<-grep(">", bed2)[1]
+# bed2<-bed2[sta:length(bed2)]
+
+
+# combined_seqs<-c()
+
+# for(i in 1:nrow(coor)){
+	# tmp<-c()
+	# r<-na.omit(which(paste(">",coor[i,1],sep="")==rRNA)[1])
+	# if(length(r)>0){
+		# if( rRNA[r+1]!="No 16sRNA sequence found"){
+			# tmp<-c(tmp, coor[i,"ID"],coor[i,"Full_header"],coor[i,"sequence"],rRNA[r+1])
+			# if(coor[i,2]=="+"){
+				# na<-paste(">",coor[i,1],"_",as.numeric(coor[i,3])-up,"_",as.numeric(coor[i,4])+down,sep="")
+			# }
+			# if(coor[i,2]=="-"){
+				# na<-paste(">",coor[i,1],"_",as.numeric(coor[i,3])-down,"_",as.numeric(coor[i,4])+up,sep="")
+			# }
+			# pr<-na.omit(which(bed2==na)[1])
+			# if(length(pr)>0){
+				# #print(i)
+				# tmp<-c(tmp,bed2[pr+1])		
+				# combined_seqs<-rbind(combined_seqs,tmp)
+			# }
+		# }
+	# }
+# }
+
+# # call mafft for MSA
+# mafft<-function(filename="ncrna.fa", outname="ncrna_aligned.fa", mode="fast"){
+	# if(mode=="accurate"){
+		# command<-paste("mafft --maxiterate 1000 --localpair --quiet --inputorder ", filename, " > ", outname, sep="" )
+	# }
+	# if(mode=="fast"){
+		# command<-paste("mafft --retree 2 --maxiterate 0 --quiet --inputorder ", filename, " > ", outname, sep="" )
+	# }
+	# if(mode=="very_fast"){
+		# command<-paste("mafft --retree 1 --maxiterate 0 --quiet --inputorder ", filename, " > ", outname, sep="" )
+	# }
+	# system(command)
+# } 
+
+
+# tree_weights<-function(tree, method="clustal"){
+	# tip<-Ntip(tree)
+	# node<-Nnode(tree)
+	# di<-dist.nodes(tree)
+	# root<-setdiff(tree[[1]][,1],tree[[1]][,2])
+	# out<-vector("list",tip)
+	# names(out)<-1:tip
+	# for(i in 1:tip){
+		# temp<-numeric(0)
+		# t1<-i
+		# while(t1!=(tip+1)){
+			# t1<-tree[[1]][which(tree[[1]][,2]==t1),1]
+			# temp<-c(temp,t1)
+		# }
+		# out[[i]]<-temp
+	# }
+	# count<-table(unlist(out))
+	# le<-0
+	# for(i in 1:length(count)){
+		# t1<-tree[[1]][which(tree[[1]][,2]==as.numeric(names(count)[i])),1]
+		# le<-c(le,di[t1,as.numeric(names(count)[i])])
+	# }
+	# if(method=="clustal"){
+		# count<-le/count
+	# }
+	# if(method=="copra"){
+		# names(le)<-names(count)
+		# count<-le/2
 		
-	}
-	weight<-numeric()
-	for(i in 1:tip){
-		t1<-di[as.numeric(names(out)[i]),out[[i]][1]]
-		po<-match(out[[i]],names(count))
-		weight<-c(weight,sum(count[po],t1))
+	# }
+	# weight<-numeric()
+	# for(i in 1:tip){
+		# t1<-di[as.numeric(names(out)[i]),out[[i]][1]]
+		# po<-match(out[[i]],names(count))
+		# weight<-c(weight,sum(count[po],t1))
 		
-	}
-	names(weight)<-tree$tip.label
-	weight<-weight/sum(weight)
-	weight
-}
+	# }
+	# names(weight)<-tree$tip.label
+	# weight<-weight/sum(weight)
+	# weight
+# }
 
 
-# weights based on 16S rDNA
-fasta16<-c()
-for(i in 1:nrow(combined_seqs)){
-	fasta16<-c(fasta16,paste(">",combined_seqs[i,1], sep=""))
-	fasta16<-c(fasta16, combined_seqs[i,4])
-}
+# # weights based on 16S rDNA
+# fasta16<-c()
+# for(i in 1:nrow(combined_seqs)){
+	# fasta16<-c(fasta16,paste(">",combined_seqs[i,1], sep=""))
+	# fasta16<-c(fasta16, combined_seqs[i,4])
+# }
 
-temp_fas<-tempfile()
-temp_fas2<-tempfile()
-writeLines(fasta16,con=temp_fas)
-align16<-system(paste("mafft --thread 40 --retree 2 --maxiterate 0 --quiet --inputorder ", temp_fas, " > ", temp_fas2,seq=""))
+# temp_fas<-tempfile()
+# temp_fas2<-tempfile()
+# writeLines(fasta16,con=temp_fas)
+# align16<-system(paste("mafft --thread 40 --retree 2 --maxiterate 0 --quiet --inputorder ", temp_fas, " > ", temp_fas2,seq=""))
 
-ribo<-read.phyDat(temp_fas2, format="fasta", type="DNA")
-dm <- dist.ml(ribo, model="F81")
-fitJC<- upgma(dm)
-weight16<-tree_weights(fitJC, method="clustal")
-dist_ham_ribo<-dist.hamming(ribo)
-dist_ham_ribo<-as.matrix(dist_ham_ribo)
+# ribo<-read.phyDat(temp_fas2, format="fasta", type="DNA")
+# dm <- dist.ml(ribo, model="F81")
+# fitJC<- upgma(dm)
+# weight16<-tree_weights(fitJC, method="clustal")
+# dist_ham_ribo<-dist.hamming(ribo)
+# dist_ham_ribo<-as.matrix(dist_ham_ribo)
 
 
-# weights based on sRNA
-fasta_sRNA<-c()
-for(i in 1:nrow(combined_seqs)){
-	fasta_sRNA<-c(fasta_sRNA,paste(">", combined_seqs[i,1], sep=""))
-	fasta_sRNA<-c(fasta_sRNA, combined_seqs[i,3])
-}
+# # weights based on sRNA
+# fasta_sRNA<-c()
+# for(i in 1:nrow(combined_seqs)){
+	# fasta_sRNA<-c(fasta_sRNA,paste(">", combined_seqs[i,1], sep=""))
+	# fasta_sRNA<-c(fasta_sRNA, combined_seqs[i,3])
+# }
 
-temp_fas<-tempfile()
-temp_fas2<-tempfile()
-writeLines(fasta_sRNA,con=temp_fas)
-align_sRNA<-system(paste("mafft --thread 40 --retree 2 --maxiterate 0 --quiet --inputorder ", temp_fas, " > ", temp_fas2,seq=""))
-srna<-read.phyDat(temp_fas2, format="fasta", type="DNA")
-dm <- dist.ml(srna, model="F81")
-fitJC<- upgma(dm)
-weight_sRNA<-tree_weights(fitJC, method="clustal")
-dist_ham_srna<-dist.hamming(srna)
-dist_ham_srna<-as.matrix(dist_ham_srna)
+# temp_fas<-tempfile()
+# temp_fas2<-tempfile()
+# writeLines(fasta_sRNA,con=temp_fas)
+# align_sRNA<-system(paste("mafft --thread 40 --retree 2 --maxiterate 0 --quiet --inputorder ", temp_fas, " > ", temp_fas2,seq=""))
+# srna<-read.phyDat(temp_fas2, format="fasta", type="DNA")
+# dm <- dist.ml(srna, model="F81")
+# fitJC<- upgma(dm)
+# weight_sRNA<-tree_weights(fitJC, method="clustal")
+# dist_ham_srna<-dist.hamming(srna)
+# dist_ham_srna<-as.matrix(dist_ham_srna)
 
-# combined weights
-weight_comb<-apply(cbind(weight16,weight_sRNA), 1, function(x){return(exp(mean(log(x))))})
-weight_comb<-weight_comb/sum(weight_comb)
+# # combined weights
+# weight_comb<-apply(cbind(weight16,weight_sRNA), 1, function(x){return(exp(mean(log(x))))})
+# weight_comb<-weight_comb/sum(weight_comb)
 
 
 # alignment of promoters
@@ -704,10 +733,17 @@ dis
 # }
 # dis
 # }
+dis<-dist_ham_srna
+id_pos<-na.omit(match(gsub("\\..*","",wildcard_ids),gsub("\\..*","",rownames(dis))))
+if(length(id_pos)==0){
+	id_pos<-na.omit(match(gsub("\\..*","",wildcard_ids),gsub("\\..*","",coor[,"fin"])))
+	wildcard_ids<-coor[id_pos,1]
+}
 
 steps<-0
 thres_vect<-c()
 a<-dist_ham_srna
+
 dim_vect<-c()
 if(dim(a)[1] > n_orgs_synt){
 	while(is.null(a) | dim(a)[1] > n_orgs_synt){
@@ -738,7 +774,8 @@ if(dim(a)[1] > n_orgs_synt){
 
 
 
-
+#print(a)
+#print(combined_seqs)
 
 
 c2<-combined_seqs[match(colnames(a),combined_seqs[,"ID"]),]
@@ -785,6 +822,8 @@ tree$tip.label<-make.names(lab1)
 lab2<-id_fam[nam_id,1]
 
 
+trees<-list(fitJC,tree)
+save(trees, file="trees.Rdata")
 # require(ggtree)
 # pdf("tree_test.pdf")
 # ggtree(tree)  + geom_tiplab(size=0.8)
@@ -1012,18 +1051,19 @@ dev.off()
 
 coor2<-match(fitJC$tree$tip.label, coor[,"ID"])
 coor2<-coor[coor2,]
+#coor2<-as.matrix(coor2)
 colnames(id_fam)<-c("synteny_cluster","ID","all_cluster")
 pos<-match(coor2[,"ID"],id_fam[,2])
 coor2<-cbind(coor2,id_fam[pos,])
 coor2<-coor2[order(coor2[,"synteny_cluster"]),]
-s<-as.numeric(coor2[,3])
-e<-as.numeric(coor2[,4])
+s<-as.numeric(as.character(coor2[,3]))
+e<-as.numeric(as.character(coor2[,4]))
 m<-round(s+(e-s)/2,digits=0)
 synteny_window<-5000
 wi<-rep(synteny_window,nrow(coor2))
 
 #coor3<-cbind(paste(coor[,1],"_",coor[,3],sep=""),coor[,1],m,wi)
-coor3<-cbind(coor2[,"ID"],coor2[,1],m,wi)
+coor3<-cbind(as.character(coor2[,"ID"]),as.character(coor2[,1]),as.character(m),as.character(wi))
 
 coordinates<-tempfile()
 write.table(coor3,file=coordinates, sep="\t", row.names=F, col.names=F, quote=F)
@@ -1074,8 +1114,8 @@ for(i in 1:length(ids)){
 		mi<-min(as.numeric(temp_out[,2]))
 		aa<-as.numeric(temp_out[,2])-mi
 		bb<-as.numeric(temp_out[,3])-mi
-		s_srna<-min(as.numeric(coor2[srna,3:4]))-mi
-		e_srna<-max(as.numeric(coor2[srna,3:4]))-mi
+		s_srna<-min(as.numeric(as.character(coor2[srna,3])),as.numeric(as.character(coor2[srna,4])))-mi
+		e_srna<-max(as.numeric(as.character(coor2[srna,3])),as.numeric(as.character(coor2[srna,4])))-mi
 		nan<-which(is.na(temp_out[,"locus_tag"]))
 		na<-which(temp_out[,"locus_tag"]=="na")
 		nan<-unique(c(na,nan))
@@ -1083,6 +1123,8 @@ for(i in 1:length(ids)){
 			temp_out[nan,"locus_tag"]<-unlist(lapply(length(nan),rand_extension,Accession=ids[i]))
 		}
 		temp_out<-data.frame(temp_out,aa,bb,rep(s_srna,nrow(temp_out)),rep(e_srna,nrow(temp_out)),rep(stra,nrow(temp_out)),rep(coor2[srna,5],nrow(temp_out)))
+		temp_out[,2]<-as.numeric(as.character(temp_out[,2]))
+		temp_out[,3]<-as.numeric(as.character(temp_out[,3]))
 		out[[i]]<-temp_out
 	}
 }
