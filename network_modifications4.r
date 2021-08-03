@@ -247,10 +247,23 @@ remove_overlapping_homologs<-function(coor, over_thres=0.5){
 	coor
 }
 
+make_oneline_fasta<-function(x){
+	header <- grep(">", x)
+	header<- c(header,length(x)+1)
+	out<-c()
+	for(i in 1:(length(header)-1)){
+		tmp<-paste(x[(header[i]+1):(header[i+1]-1)],collapse="")
+		out<-c(out, x[header[i]],tmp)
+	}
+	out
+}
+
+
 # Execute functions
-fasta<-read.delim(filename, header=F, sep="\t")
+fasta<-readLines(filename)
 closeAllConnections()
-fasta<-as.character(fasta[,1])
+#fasta<-as.character(fasta)
+fasta<-make_oneline_fasta(fasta)
 coor<-export_ncRNA_coordinates(fasta)
 while(length(which(duplicated(coor[,"ID"])))>0){
 	coor<-remove_overlapping_homologs(coor)
@@ -392,7 +405,7 @@ combined_seqs<-c()
 #rRNA2[,1]<-gsub(">","",rRNA2[,1])
 #rRNA2[,1]<-gsub(":.*","",rRNA2[,1])
 
-
+count<-0
 
 for(i in 1:nrow(coor)){
 	tmp<-c()
@@ -404,16 +417,19 @@ for(i in 1:nrow(coor)){
 				na<-paste(">",coor[i,1],":",as.numeric(coor[i,3])-up,"-",as.numeric(coor[i,4])+down,sep="")
 			}
 			if(coor[i,2]=="-"){
-				na<-paste(">",coor[i,1],":",as.numeric(coor[i,3])-down,"-",as.numeric(coor[i,4])+up,sep="")
+				na<-paste(">",coor[i,1],":c",as.numeric(coor[i,4])+up,"-",as.numeric(coor[i,3])-down,sep="")
 			}
 			pr<-na.omit(which(bed2==na)[1])
 			if(length(pr)>0){
 				#print(i)
 				tmp<-c(tmp,bed2[pr+1])		
 				combined_seqs<-rbind(combined_seqs,tmp)
+			} else{
+				count<-count+1
+				print(i)
 			}
-		}
-	}
+		} 
+	} 
 }
 
 # call mafft for MSA
@@ -982,7 +998,7 @@ write.table(network, file=paste("post_processed_",network_file, sep=""),sep="\t"
 write.table(anno, file=paste("post_processed_",anno_file, sep=""),sep="\t", row.names=F, quote=F)
 
 
-# drawing the detected families as un connected sub-networks
+# drawing the detected families as un-connected sub-networks
 # if only_sig_nodes is TRUE end-nodes below the given threshold are removed
 # from the network.
 
