@@ -16,14 +16,15 @@ require(MCL)
 options(scipen=999)
 #filename<-file('stdin', 'r') # result fasta file from GLASSgo
 #filename<-"~/For_CopraRNA2.0/OxyS/IsaR1/clear/IsaR1clear.txt"
-
+reference<-NA
+reference<-"NZ_CP018205.1"
 filename<-"/home/jens/media/jens@margarita/Staph_enrichment/01_GLASSgo_Results/01_GLASSgo_Results/01_GLASSgo_Results/01_GLASSgo_Results/GLASSgo_output_HG001_01716.fa"
 filename<-"/home/jens/media/jens@margarita/Copra2_paper/Glassgo/RyhB/RyhB_ref2.fa"
 #filename<-"~/media/jens@margarita/Copra2_paper/Glassgo/Spot42/Spot42_rev.fa"
 script_path<-"~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py"
 #script_path<-"~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py"
 #db_path<-"/media/cyano_share/exchange/Jens/Syntney/mySQLiteDB_new.db"
-db_path<-"~/synteny/synt_rRNA.db"
+db_path<-"~/synt_rRNA_fayyaz.db"
 working_directory<-getwd()
 only_sig_nodes<-TRUE
 max_synt<-1000
@@ -53,6 +54,7 @@ down<-as.numeric(down)
 
 setwd(working_directory)
 d<-dir()
+filename<-d[grep("_Network.fasta",d)[1]]
 network_file<-d[grep("_Network.txt",d)[1]]
 anno_file<-d[grep("_Network_Annotation.txt",d)[1]]
 cluster_file<-d[grep("_Network_Cluster.txt",d)[1]]
@@ -270,10 +272,34 @@ while(length(which(duplicated(coor[,"ID"])))>0){
 }
 
 orgs<-(coor[,1])
-command<-paste("python3 ", script_path, " -s ", db_path, " -rs ", paste(orgs, collapse=" "))
-print(command)
-refseq<-system(command, intern=T)
 
+refseq<-c()
+
+runs<-length(orgs)%/% 1000
+rest<-length(orgs)-1000*runs
+
+
+if(runs>0){
+	if(rest>0){
+		st<-seq(0,1000*runs, 1000)+1
+	} else {
+		st<-seq(0,1000*(runs-1), 1000)+1
+	}
+	en<-seq(1000,1000*runs, 1000)
+	if(rest>0){
+		en<-c(en,1000*runs+rest)
+	}
+} else{
+
+	st<-1
+	en<-rest
+}
+
+for(i in 1:length(en)){
+command<-paste("python3 ", script_path, " -s ", db_path, " -rs ", paste(orgs[st[i]:en[i]], collapse=" "))
+print(command)
+refseq<-c(refseq,system(command, intern=T))
+}
 
 odd<-seq(1,length(refseq)-1,by=2)
 refseq2<-refseq[odd]
@@ -526,17 +552,23 @@ temp_fas<-tempfile()
 temp_fas2<-tempfile()
 writeLines(fasta_sRNA,con=temp_fas)
 align_sRNA<-system(paste("mafft --thread ", threads," --retree 2 --maxiterate 0 --quiet --inputorder ", temp_fas, " > ", temp_fas2,seq=""))
-srna<-read.phyDat(temp_fas2, format="fasta", type="DNA")
-dm <- dist.ml(srna, model="F81")
-fitJC<- upgma(dm)
-weight_sRNA<-tree_weights(fitJC, method="clustal")
-if(length(unique(weight_sRNA))==1){
-	if(unique(weight_sRNA)=="NaN"){
-		weight_sRNA<-rep(1,length(weight_sRNA))
-		}
-}
-dist_ham_srna<-dist.hamming(srna)
-dist_ham_srna<-as.matrix(dist_ham_srna)
+
+weight_sRNA<-tryCatch({
+	srna<-read.phyDat(temp_fas2, format="fasta", type="DNA")
+	dm <- dist.ml(srna, model="F81")
+	fitJC<- upgma(dm)
+	weight_sRNA<-tree_weights(fitJC, method="clustal")
+	if(length(unique(weight_sRNA))==1){
+		if(unique(weight_sRNA)=="NaN"){
+			weight_sRNA<-rep(1,length(weight_sRNA))
+			}
+	}
+	dist_ham_srna<-dist.hamming(srna)
+	dist_ham_srna<-as.matrix(dist_ham_srna)
+	return(list(weight_sRNA,dist_ham_srna))
+}, error = function(e){return(list(weight16,dist_ham_ribo))})
+dist_ham_srna<-weight_sRNA[[2]]
+weight_sRNA<-weight_sRNA[[1]]
 
 # combined weights
 weight_comb<-apply(cbind(weight16,weight_sRNA), 1, function(x){return(exp(mean(log(x))))})
@@ -559,7 +591,13 @@ PageRank<-rep(NA, nrow(anno))
 anno<-cbind(anno,PageRank)
 
 # Cluster with a score below the threshold are flagged to be drawn transparently
-anno[pos,"PageRank"]<-network[,"Sum.of.branches"]
+
+ex<-grep("Sum.of.branches", colnames(network))
+if(length(ex)>0){
+	anno[pos,"PageRank"]<-network[,"Sum.of.branches"]
+} else {
+	anno[pos,"PageRank"]<-network[,"PageRank"]
+}
 low<-which(anno[,"PageRank"]<thres_anno)
 filtered_names<-as.character(anno[,2])
 transparent<-rep("no",nrow(anno))
@@ -631,6 +669,21 @@ for(i in 1:nrow(cluster)){
 for(i in 1:ncol(clustab)){
 	clustab[,i]<-clustab[,i]/max(clustab[,i])
 }
+
+#export co-occurence network
+
+co_net<-c()
+for(i in 1:nrow(clustab)){
+	n<-which(clustab[i,]!=0)
+	if(length(n)>0){
+		tmp<-rep(rownames(clustab)[i],length(n))
+		tmp2<-colnames(clustab)[n]
+		tmp<-cbind(tmp,tmp2)
+		co_net<-rbind(co_net,tmp)
+	}
+}
+
+write.table(co_net, file="co_appearence_network.txt",col.names=F,row.names=F, sep="\t")
 
 cl<-mcl(clustab, addLoops=F)
 
@@ -899,7 +952,14 @@ for(i in 1:nrow(cluster)){
 id_fam<-id_fam[,c(2,1,3)]
 
 # edges with a combined weight below the given threshold are drawn transparently 
-combined.weight<-network[,"Sum.of.branches"]*network[,"connection.weight"]
+
+ex<-grep("Sum.of.branches", colnames(network))
+if(length(ex)>0){
+	combined.weight<-network[,"Sum.of.branches"]*network[,"connection.weight"]
+} else {
+	combined.weight<-network[,"PageRank"]*network[,"connection.weight"]
+}
+
 
 transparent<-rep("no",nrow(network))
 low<-which(combined.weight<thres_edge)
@@ -1172,10 +1232,21 @@ write.table(network2, file=paste("post_processed2_",network_file, sep=""),sep="\
 write.table(anno2, file=paste("post_processed2_",anno_file, sep=""),sep="\t", row.names=F, quote=F)
 write.table(id_fam, file="ids2synt_families.txt",sep="\t", row.names=F, quote=F)
 
+# re-scaled for each cluster
 
 
+anno3<-anno2
+id_c<-anno2[,"cluster_id"]
 
-
+id_c<-gsub("_.*","",id_c)
+id_c<-gsub("'","",id_c)
+anno3<-cbind(anno3,id_c)
+id_u<-na.omit(unique(id_c))
+for(i in 1:length(id_u)){
+	tmp<-which(anno3[,"id_c"]==id_u[i])
+	anno3[tmp,"PageRank"]<-as.numeric(anno3[tmp,"PageRank"])/max(as.numeric(anno3[tmp,"PageRank"]))
+}
+write.table(anno3, file=paste("post_processed2_rescaled",anno_file, sep=""),sep="\t", row.names=F, quote=F)
 tnet<-which(network2[,"transparent"]=="yes")
 if(length(tnet)>0){
 	network2<-network2[-tnet,]
