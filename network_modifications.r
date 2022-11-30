@@ -1,11 +1,12 @@
 
 #CALL:
 #R --slave -f  ~/media/jens@margarita/sRNA_scripts/network_modifications2.r --args script_path=~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/Syntney_db/synt.db filename=~/media/jens@margarita/Copra2_paper/Glassgo/Spot42/Spot42_rev.fa working_directory=~/media/jens@margarita/Copra2_paper/Glassgo/Spot42/ only_sig_nodes=TRUE thres_anno=0.001 thres_edge=0.001
-#R --slave -f  ~/media/jens@margarita/sRNA_scripts/network_modifications2.r --args script_path=~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/synteny/synt.db filename=~/synteny/rsaE_glassgo.fa working_directory=~/synteny/ only_sig_nodes=TRUE thres_anno=0.001 thres_edge=0.001
+#R --slave -f  ~/media/jens@margarita/sRNA_scripts/network_modifications5.r --args script_path=~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=../my_database.db filename=./_Network.fasta   only_sig_nodes=FALSE thres_anno=0.001 thres_edge=0.001
 
 
 
 # dependencies: 
+require(stringl)
 require(stringi)
 require(phangorn)
 require(ggtree)
@@ -16,16 +17,17 @@ require(MCL)
 options(scipen=999)
 #filename<-file('stdin', 'r') # result fasta file from GLASSgo
 #filename<-"~/For_CopraRNA2.0/OxyS/IsaR1/clear/IsaR1clear.txt"
-
-filename<-"/home/jens/media/jens@margarita/Staph_enrichment/01_GLASSgo_Results/01_GLASSgo_Results/01_GLASSgo_Results/01_GLASSgo_Results/GLASSgo_output_RsaE.fa"
-filename<-"/home/jens/media/jens@margarita/Copra2_paper/Glassgo/RyhB/RyhB_ref2.fa"
+reference<-NA
+reference<-"NZ_CP018205.1"
+filename<-"/home/jens/media/jens@margarita/Staph_enrichment/01_GLASSgo_Results/01_GLASSgo_Results/01_GLASSgo_Results/01_GLASSgo_Results/GLASSgo_output_HG001_01716.fa"
+filename<-"/home/jens/media/jens@margarita/Staph_enrichment/01_GLASSgo_Results/01_GLASSgo_Results/01_GLASSgo_Results/01_GLASSgo_Results/GLASSgo_output_HG001_02998.fa"
 #filename<-"~/media/jens@margarita/Copra2_paper/Glassgo/Spot42/Spot42_rev.fa"
 script_path<-"~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py"
 #script_path<-"~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py"
 #db_path<-"/media/cyano_share/exchange/Jens/Syntney/mySQLiteDB_new.db"
-db_path<-"~/synteny/synt.db"
+db_path<-"~/synt_rRNA_fayyaz.db"
 working_directory<-getwd()
-only_sig_nodes<-TRUE
+only_sig_nodes<-F
 max_synt<-1000
 # thresholds for including nodes or edges into the annotated network
 thres_anno<-0.001
@@ -48,9 +50,12 @@ only_sig_nodes<-as.logical(only_sig_nodes)
 max_synt<-as.numeric(max_synt)
 thres_anno<-as.numeric(thres_anno)
 thres_edge<-as.numeric(thres_edge)
+up<-as.numeric(up)
+down<-as.numeric(down)
 
 setwd(working_directory)
 d<-dir()
+filename<-d[grep("_Network.fasta",d)[1]]
 network_file<-d[grep("_Network.txt",d)[1]]
 anno_file<-d[grep("_Network_Annotation.txt",d)[1]]
 cluster_file<-d[grep("_Network_Cluster.txt",d)[1]]
@@ -245,20 +250,57 @@ remove_overlapping_homologs<-function(coor, over_thres=0.5){
 	coor
 }
 
+make_oneline_fasta<-function(x){
+	header <- grep(">", x)
+	header<- c(header,length(x)+1)
+	out<-c()
+	for(i in 1:(length(header)-1)){
+		tmp<-paste(x[(header[i]+1):(header[i+1]-1)],collapse="")
+		out<-c(out, x[header[i]],tmp)
+	}
+	out
+}
+
+
 # Execute functions
-fasta<-read.delim(filename, header=F, sep="\t")
+fasta<-readLines(filename)
 closeAllConnections()
-fasta<-as.character(fasta[,1])
+#fasta<-as.character(fasta)
+fasta<-make_oneline_fasta(fasta)
 coor<-export_ncRNA_coordinates(fasta)
 while(length(which(duplicated(coor[,"ID"])))>0){
 	coor<-remove_overlapping_homologs(coor)
 }
 
 orgs<-(coor[,1])
-command<-paste("python3 ", script_path, " -s ", db_path, " -rs ", paste(orgs, collapse=" "))
-print(command)
-refseq<-system(command, intern=T)
 
+refseq<-c()
+
+runs<-length(orgs)%/% 1000
+rest<-length(orgs)-1000*runs
+
+
+if(runs>0){
+	if(rest>0){
+		st<-seq(0,1000*runs, 1000)+1
+	} else {
+		st<-seq(0,1000*(runs-1), 1000)+1
+	}
+	en<-seq(1000,1000*runs, 1000)
+	if(rest>0){
+		en<-c(en,1000*runs+rest)
+	}
+} else{
+
+	st<-1
+	en<-rest
+}
+
+for(i in 1:length(en)){
+command<-paste("python3 ", script_path, " -s ", db_path, " -rs ", paste(orgs[st[i]:en[i]], collapse=" "))
+print(command)
+refseq<-c(refseq,system(command, intern=T))
+}
 
 odd<-seq(1,length(refseq)-1,by=2)
 refseq2<-refseq[odd]
@@ -333,17 +375,27 @@ if(length(removed2)>0){
 # create bed style file for sequence extraction
 
 
+if(nrow(coor)>1000){
+	jobs1<-nrow(coor)%/%1000
+	jobs1<-max(2,jobs1)
+	#jobs<-jobs*1000
+	jobs<-nrow(coor)%/%jobs1
+	rest<-nrow(coor)-(jobs*jobs1)
+	jobs<-rep(jobs,jobs1)
+		if(rest>0){
+			jobs[1:rest]<-jobs[1:rest]+1
+		}
+	count_vect1<-cumsum(c(1,jobs[1:(length(jobs)-1)]))
+	count_vect2<-cumsum(jobs)
+} else {
+	jobs<-nrow(coor)
+	jobs1<-1
+	rest<-0
+	count_vect1<-1
+	count_vect2<-nrow(coor)
+}
 
-jobs1<-nrow(coor)%/%1000
-#jobs<-jobs*1000
-jobs<-nrow(coor)%/%jobs1
-rest<-nrow(coor)-(jobs*jobs1)
-jobs<-rep(jobs,jobs1)
-	if(rest>0){
-		jobs[1:rest]<-jobs[1:rest]+1
-	}
-count_vect1<-cumsum(c(1,jobs[1:(length(jobs)-1)]))
-count_vect2<-cumsum(jobs)
+
 
 bed3<-c()
 for(j in 1:length(count_vect1)){
@@ -380,7 +432,7 @@ combined_seqs<-c()
 #rRNA2[,1]<-gsub(">","",rRNA2[,1])
 #rRNA2[,1]<-gsub(":.*","",rRNA2[,1])
 
-
+count<-0
 
 for(i in 1:nrow(coor)){
 	tmp<-c()
@@ -392,16 +444,19 @@ for(i in 1:nrow(coor)){
 				na<-paste(">",coor[i,1],":",as.numeric(coor[i,3])-up,"-",as.numeric(coor[i,4])+down,sep="")
 			}
 			if(coor[i,2]=="-"){
-				na<-paste(">",coor[i,1],":",as.numeric(coor[i,3])-down,"-",as.numeric(coor[i,4])+up,sep="")
+				na<-paste(">",coor[i,1],":c",as.numeric(coor[i,4])+up,"-",as.numeric(coor[i,3])-down,sep="")
 			}
 			pr<-na.omit(which(bed2==na)[1])
 			if(length(pr)>0){
 				#print(i)
 				tmp<-c(tmp,bed2[pr+1])		
 				combined_seqs<-rbind(combined_seqs,tmp)
+			} else{
+				count<-count+1
+				print(i)
 			}
-		}
-	}
+		} 
+	} 
 }
 
 # call mafft for MSA
@@ -498,17 +553,23 @@ temp_fas<-tempfile()
 temp_fas2<-tempfile()
 writeLines(fasta_sRNA,con=temp_fas)
 align_sRNA<-system(paste("mafft --thread ", threads," --retree 2 --maxiterate 0 --quiet --inputorder ", temp_fas, " > ", temp_fas2,seq=""))
-srna<-read.phyDat(temp_fas2, format="fasta", type="DNA")
-dm <- dist.ml(srna, model="F81")
-fitJC<- upgma(dm)
-weight_sRNA<-tree_weights(fitJC, method="clustal")
-if(length(unique(weight_sRNA))==1){
-	if(unique(weight_sRNA)=="NaN"){
-		weight_sRNA<-rep(1,length(weight_sRNA))
-		}
-}
-dist_ham_srna<-dist.hamming(srna)
-dist_ham_srna<-as.matrix(dist_ham_srna)
+
+weight_sRNA<-tryCatch({
+	srna<-read.phyDat(temp_fas2, format="fasta", type="DNA")
+	dm <- dist.ml(srna, model="F81")
+	fitJC<- upgma(dm)
+	weight_sRNA<-tree_weights(fitJC, method="clustal")
+	if(length(unique(weight_sRNA))==1){
+		if(unique(weight_sRNA)=="NaN"){
+			weight_sRNA<-rep(1,length(weight_sRNA))
+			}
+	}
+	dist_ham_srna<-dist.hamming(srna)
+	dist_ham_srna<-as.matrix(dist_ham_srna)
+	return(list(weight_sRNA,dist_ham_srna))
+}, error = function(e){return(list(weight16,dist_ham_ribo))})
+dist_ham_srna<-weight_sRNA[[2]]
+weight_sRNA<-weight_sRNA[[1]]
 
 # combined weights
 weight_comb<-apply(cbind(weight16,weight_sRNA), 1, function(x){return(exp(mean(log(x))))})
@@ -531,7 +592,13 @@ PageRank<-rep(NA, nrow(anno))
 anno<-cbind(anno,PageRank)
 
 # Cluster with a score below the threshold are flagged to be drawn transparently
-anno[pos,"PageRank"]<-network[,"Sum.of.branches"]
+
+ex<-grep("Sum.of.branches", colnames(network))
+if(length(ex)>0){
+	anno[pos,"PageRank"]<-network[,"Sum.of.branches"]
+} else {
+	anno[pos,"PageRank"]<-network[,"PageRank"]
+}
 low<-which(anno[,"PageRank"]<thres_anno)
 filtered_names<-as.character(anno[,2])
 transparent<-rep("no",nrow(anno))
@@ -603,6 +670,21 @@ for(i in 1:nrow(cluster)){
 for(i in 1:ncol(clustab)){
 	clustab[,i]<-clustab[,i]/max(clustab[,i])
 }
+
+#export co-occurence network
+
+co_net<-c()
+for(i in 1:nrow(clustab)){
+	n<-which(clustab[i,]!=0)
+	if(length(n)>0){
+		tmp<-rep(rownames(clustab)[i],length(n))
+		tmp2<-colnames(clustab)[n]
+		tmp<-cbind(tmp,tmp2)
+		co_net<-rbind(co_net,tmp)
+	}
+}
+
+write.table(co_net, file="co_appearence_network.txt",col.names=F,row.names=F, sep="\t")
 
 cl<-mcl(clustab, addLoops=F)
 
@@ -871,7 +953,14 @@ for(i in 1:nrow(cluster)){
 id_fam<-id_fam[,c(2,1,3)]
 
 # edges with a combined weight below the given threshold are drawn transparently 
-combined.weight<-network[,"Sum.of.branches"]*network[,"connection.weight"]
+
+ex<-grep("Sum.of.branches", colnames(network))
+if(length(ex)>0){
+	combined.weight<-network[,"Sum.of.branches"]*network[,"connection.weight"]
+} else {
+	combined.weight<-network[,"PageRank"]*network[,"connection.weight"]
+}
+
 
 transparent<-rep("no",nrow(network))
 low<-which(combined.weight<thres_edge)
@@ -970,7 +1059,7 @@ write.table(network, file=paste("post_processed_",network_file, sep=""),sep="\t"
 write.table(anno, file=paste("post_processed_",anno_file, sep=""),sep="\t", row.names=F, quote=F)
 
 
-# drawing the detected families as un connected sub-networks
+# drawing the detected families as un-connected sub-networks
 # if only_sig_nodes is TRUE end-nodes below the given threshold are removed
 # from the network.
 
@@ -1144,7 +1233,104 @@ write.table(network2, file=paste("post_processed2_",network_file, sep=""),sep="\
 write.table(anno2, file=paste("post_processed2_",anno_file, sep=""),sep="\t", row.names=F, quote=F)
 write.table(id_fam, file="ids2synt_families.txt",sep="\t", row.names=F, quote=F)
 
+# re-scaled for each cluster
+network3<-c()
+anno3<-c()
+for(i in 1:min(length(uid),max_synt=max_synt)){
+	tmp<-which(network[,"cluster_id"]==uid[i])
+	tmp<-network[tmp,]
+	not_in_clus<- setdiff(tmp[,2],tmp[,1])
+	not_in_clus<-setdiff(not_in_clus, "sRNA")
+	for(jj in not_in_clus){
+		pos<-which(tmp[,2]==jj)
+		tmp<-tmp[-pos,]
+	}
 
+	if(only_sig_nodes==TRUE){
+		tmp<-check_sig(tmp)
+	}
+	
+	notcon<-not_connected2sRNA(tmp)
+	for(jj in notcon){
+		a<-na.omit(match(jj, tmp[,1]))
+		b<-na.omit(match(jj, tmp[,2]))
+		a<-c(a,b)
+		if(length(a)>0){
+			tmp<-tmp[-a,]
+		}
+		
+	}
+	
+	# if(length(notcon)>0){
+		# notcon<-notcon[which(tmp[match(notcon,tmp[,1]),"Sum.of.branches"]>=thres_anno)]
+		# if(length(notcon)>0){
+			# notcon<-notcon[order(tmp[match(notcon,tmp[,1]),"Sum.of.branches"], decreasing=T)]
+			# path<-surf(network, notcon)
+			# if(length(path)>1){
+				# #find path with highest overlap to sub network
+				# ov<-unlist(lapply(path, function(x){
+					# tmp<-length(match(x,c(tmp[,1],tmp[,2])))
+				# }))
+				# ov<-which(ov==max(ov))
+				# path<-path[ov]
+				# if(length(path)>1){
+					# # length of path to srna
+					# le<-unlist(lapply(path, length))
+					# le<-which(le==min(le))
+					# path<-path[le]
+					# if(length(path)>1){
+						# path<-path[[1]]
+					# }
+				# }
+			# } else {
+				# path<-path[[1]]
+			# }
+			# path<-c(path,"sRNA")
+			# for(j in 1:(length(path)-1)){
+				# te<-which(network[,1]==path[j] & network[,2]==path[j+1])
+				# tmp<-rbind(tmp,network[te,])
+			# }
+		# }
+	# }
+	
+	if(nrow(tmp)>0){
+		srna<-grep("sRNA", tmp[,2])
+		if(length(srna)>0){
+			tmp_ids<-unique(c(as.character(tmp[,1]),as.character(tmp[,2])))
+			tmp_anno<-anno[na.omit(match(tmp_ids,anno[,1])),]
+			tmp_anno[,1]<-paste(tmp_anno[,1],i,sep="_")
+			
+			tmp[,1]<-paste(tmp[,1],i,sep="_")
+			tmp[,2]<-paste(tmp[,2],i,sep="_")
+			network3<-rbind(network3,tmp)
+			anno3<-rbind(anno3,tmp_anno)
+		}
+	}
+}
+
+for(i in 1:length(uid)){
+	tmp<-rep(NA, ncol(anno3))
+	tmp[1]<-paste0("sRNA_",i)
+	tmp[5]<-1#max(as.numeric(anno3[,"PageRank"]),na.rm=T)*0.6
+	tmp[6]<-paste0("sRNA fam: ",i)
+	tmp[7]<-"no" 
+	anno3<-rbind(anno3,tmp)
+}
+
+
+id_c<-anno3[,"cluster_id"]
+
+id_c<-gsub("_.*","",id_c)
+id_c<-gsub("'","",id_c)
+anno3<-cbind(anno3,id_c)
+id_u<-na.omit(unique(id_c))
+for(i in 1:length(id_u)){
+	tmp<-which(anno3[,"id_c"]==id_u[i])
+	anno3[tmp,"PageRank"]<-as.numeric(anno3[tmp,"PageRank"])/max(as.numeric(anno3[tmp,"PageRank"]))
+}
+
+write.table(network3, file=paste("post_processed3_",network_file, sep=""),sep="\t", row.names=F, quote=F)
+write.table(anno3, file=paste("post_processed3_",anno_file, sep=""),sep="\t", row.names=F, quote=F)
 
 
 

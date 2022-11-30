@@ -1,13 +1,16 @@
 #!/usr/bin/Rscript
 
 # dependencies: 
+require(stringr)
 require(stringi)
 require(phangorn)
 require(ggtree)
 #genbank_groper_sqliteDB_ver00.py
 #CALL:
-#R --slave -f  ~/sRNA_scripts/sRNA_promoter_conservation.r --args wildcard_ids=U00096.3,CP003069.1 filename=~/For_CopraRNA2.0/OxyS/OxyS2/oxyS.txt  synteny_window=5000 script_path=~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/synt.db
+#R --slave -f  ~/media/jens@margarita/sRNA_scripts/sRNA_promoter_conservation_weblogo2.r --args wildcard_ids=NZ_CP018205.1,NZ_CP018205,CP018205.1,CP018205 filename=/home/jens/media/jens@margarita/Staph_enrichment/01_GLASSgo_Results/01_GLASSgo_Results/01_GLASSgo_Results/01_GLASSgo_Results/GLASSgo_output_HG001_02998.fa    synteny_window=5000 script_path=~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/synt_rRNA_fayyaz.db
+#R --slave -f  ~/media/jens@margarita/sRNA_scripts/sRNA_promoter_conservation_weblogo2.r --args wildcard_ids=NZ_CP018205.1,NZ_CP018205,CP018205.1,CP018205  synteny_window=5000 script_path=~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/synt_rRNA_fayyaz.db
 
+#R --slave -f  ~/media/jens@margarita/sRNA_scripts/sRNA_promoter_conservation_weblogo2.r --args  synteny_window=5000 script_path=~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/synt_rRNA_fayyaz.db
 
 
 #filename<-file('stdin', 'r') # result fasta file from GLASSgo
@@ -18,7 +21,7 @@ script_path<-"~/media/jens@margarita/Syntney/packages/GENBANK_GROPER_SQLITE/genb
 #script_path<-"~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py"
 #db_path<-"/media/cyano_share/exchange/Jens/Syntney/mySQLiteDB_new.db"
 #db_path<-"~/synt.db"
-db_path<-"~/synteny/synt_rna.db"
+db_path<-"~/synt_rRNA_fayyaz.db"
 threads<-30
 name<-"sRNA"
 #write_files<-F
@@ -26,11 +29,14 @@ name<-"sRNA"
 #up<-150
 #down<-50
 # S. oneidensis, V. cholerae, Aeromonas hydrofila, Y. pseudotubecolosis YPIII, S. enterica, Xenorhabdus Nematophila,  Aliivibrio salmonicida
-wildcard_ids<-c("NC_000913","NC_004347","NC_002505","NZ_CP006870","NC_010465","NC_016810","NC_014228","NC_011312")
-#wildcard_ids<-c("U00096.3","CP003069.1")
-n_orgs_synt<-200
+#wildcard_ids<-c("NC_000913","NC_004347","NC_002505","NZ_CP006870","NC_010465","NC_016810","NC_014228","NC_011312")
+wildcard_ids<-c("NZ_CP018205.1","NZ_CP018205","CP018205.1","CP018205")
+reference<-NA
+reference<-"NZ_CP018205"
+n_orgs_synt<-150
 synteny_window<-5000 # number of bases upstream and downstream of the sRNA that were searched for protein coding genes for the synteny analysis
 thres_val<-0.0001
+working_directory<-getwd()
 args <- commandArgs(trailingOnly = TRUE) 
 
 for(i in 1:length(args)){
@@ -94,6 +100,29 @@ split_glassgo<-function(x){
 	ID<-paste(id,a,sep="_")
 	out<-c(id, strand, st,en,name,ID)
 	out
+}
+
+
+
+# identify homologous proteins using CDhit
+cdhit_run<-function(fasta="protein_fasta.txt", outname="psi", thres=0.3, psi=T, threads=2){
+	tempf<-tempfile()
+	wd<-getwd()
+	di<-paste(wd,"/", "psi_out",sep="")
+	dir.create(di)
+	if(psi==T){
+		inp<-paste("./psi-cd-hit.pl -i ", fasta,  " -d 50 -o ", tempf, " -c ", thres, sep="")
+	 }
+	if(psi==F){
+		inp<-paste("cd-hit -i ", fasta,  " -d 50 -o ",tempf, " -c ",  thres ," -n 2", " -aL 0.6", " -T ", threads, sep="")
+	}
+	 # print(inp)
+	 system(inp, intern=T)
+	 cd<-paste(tempf, ".clstr", sep="")
+	 cd<-readLines(cd)
+	 cd<-as.character(cd)
+	 cd<-gsub("\t"," ", cd)
+	 cd
 }
 
 
@@ -808,7 +837,7 @@ if(dim(a)[1] > n_orgs_synt){
 
 
 
-#print(a)
+print(dim(a))
 #print(combined_seqs)
 
 
@@ -883,14 +912,32 @@ treeNJ <- NJ(dm)
 # fitJC = optim.pml(fitStart, rearrangement = "stochastic",optGamma=TRUE, optInv=TRUE, model="GTR")
 
 
-fitStart = pml(treeNJ, pr, k=4)
-fitJC = optim.pml(fitStart, model="GTR", optGamma=T, rearrangement="stochastic",ratchet.par = list(iter = 5L, maxit = 20L, prop = 1/3),control = pml.control(epsilon = 1e-08, maxit = 10, trace = 1L))
+#fitStart = pml(treeNJ, pr, k=4)
+#fitJC = optim.pml(fitStart, model="GTR", optGamma=T, rearrangement="stochastic",ratchet.par = list(iter = 5L, maxit = 20L, prop = 1/3),control = pml.control(epsilon = 1e-08, maxit = 10, trace = 1L))
 
-tree<-fitJC$tree
+#tree<-fitJC$tree
+tree<-treeNJ
 #tree<-fit$tree
 nam<-match(tree$tip.label, coor[,"ID"])
 nam_id<-match(tree$tip.label, id_fam[,2])
-lab1<-paste(coor[nam,"name"]," | ",coor[nam,"ID"],"|",id_fam[nam_id,1],";",id_fam[nam_id,3],sep="")
+
+n1<-coor[nam,"name"]
+n1<-gsub("complete", "",n1, ignore.case=T)
+n1<-gsub("DNA", "",  n1, ignore.case=T)
+n1<-gsub("chromosome",  "",n1, ignore.case=T)
+n1<-gsub("genome",  "",n1, ignore.case=T)
+n1<-gsub("genome assembly",  "",n1, ignore.case=T)
+n1<-gsub("assembly",  "",n1, ignore.case=T)
+tmp<-strsplit(n1," ")
+tmp<-lapply(tmp, function(x){
+		return(paste0(x[1],"_",x[2], "_",x[length(x)]))
+	})
+	tmp<-(unlist(tmp))
+
+
+#lab1<-paste(coor[nam,"name"]," | ",coor[nam,"ID"],"|",id_fam[nam_id,1],"_",id_fam[nam_id,3],sep="")
+#lab1<-paste(tmp,"_",coor[nam,"ID"],"_",id_fam[nam_id,1],"_",id_fam[nam_id,3],sep="")
+lab1<-paste(tmp,"_",coor[nam,"Accesion_number"],"--",id_fam[nam_id,1],sep="")
 tree$tip.label<-make.names(lab1)
 lab2<-id_fam[nam_id,1]
 nak<-which(is.na(lab2))
@@ -899,7 +946,7 @@ if(length(nak)>0){
 	lab2[nak]<-(ma+1):(ma+length(nak))
 }
 
-trees<-list(fitJC,tree)
+trees<-list(treeNJ,tree)
 save(trees, file="trees.Rdata")
 # require(ggtree)
 # pdf("tree_test.pdf")
@@ -988,6 +1035,11 @@ color<-c("#0E657C","#851220","#496E00","#46006F","#8C675E","#DF9300","#2E7663","
 
 
 
+
+
+
+
+
 fam<-unique(id_fam[,"synteny_cluster"])
 weight<-weight_comb
 tit="logo"
@@ -1009,12 +1061,15 @@ for(i in 1:length(fam)){
 			prom<-c(prom,paste(">", combined_seqs[j,1], sep=""))
 			prom<-c(prom, combined_seqs[j,5])
 		}
-
+		
+		
+		
+		
 		temp_fas<-tempfile()
 		temp_fas2<-tempfile()
 		writeLines(prom,con=temp_fas)
 		align_prom<-system(paste("mafft --thread 40 --maxiterate 1000 --localpair --quiet --inputorder  ", temp_fas, seq=""),intern=TRUE)
-		writeLines(align_prom, con="prom_align.fasta")
+		writeLines(align_prom, con=paste0("prom_align_",i,".fasta"))
 		#print("jjjjjjjjjjjjjjjjjjjjjjjj")
 		header<-grep(">",align_prom)
 		seq4<-vector("list", length(header))
@@ -1024,11 +1079,36 @@ for(i in 1:length(fam)){
 			tmp<-paste(tmp,collapse="")
 			seq4[[j]]<-strsplit(tmp,"")[[1]]
 		}
-		tmp<-align_prom[(header[length(header)]+1):length(align_prom)]
-		tmp<-paste(tmp,collapse="")
-		seq4[[length(seq4)]]<-strsplit(tmp,"")[[1]]
-
-
+		
+		
+		
+		
+		#annotate sRNA sequence in Logo
+		ref_pos<-1
+		if(is.na(reference)==F){
+			ref_seq<-grep(reference, names(seq4))
+			if(length(ref_seq)>0){
+				ref_pos<-ref_seq[1]
+			}
+		}
+		ref_name<-names(seq4)[ref_pos]
+		ref_seq<-match(names(seq4)[ref_pos],coor[,"ID"])
+		ref_seq<-coor[ref_seq,"sequence"]
+		
+		ref_prom<-match(ref_name, combined_seqs[,1])
+		ref_prom<-combined_seqs[ref_prom,5]
+		srna_pos<-str_locate(ref_prom,ref_seq)
+		ref_align<-seq4[[ref_pos]]
+		ref_align<-which(ref_align!="-")
+		srna_pos<-ref_align[srna_pos[1,]]
+		print(srna_pos)
+		anno_string<-c(rep("_",(srna_pos[1]-1)),rep("s",srna_pos[2]-srna_pos[1]), rep("_",length(seq4[[1]])-(srna_pos[2]-1)))
+		anno_string<-paste(anno_string, collapse=",")
+		anno_string<-paste0("'",anno_string,"'")
+		
+		
+		#anno_string<-rep(" ",length(seq4[[1]])
+		####
 		seq4<-do.call(rbind,seq4)
 		seq4<-toupper(seq4)
 		weight<-weight*length(pos)
@@ -1051,12 +1131,12 @@ for(i in 1:length(fam)){
 		#writeLines(mat, con=paste0("MAt_node",node,".pssm"))
 		writeLines(mat, con=paste0("MAt_node",fam[i],".pssm"))
 		writeLines(align_prom, con=paste0("align_node",fam[i],".fa"))
-		system(paste0("weblogo -F pdf -D transfac -A dna -c monochrome  -t ","synteny_family_",fam[i] ," < ", paste0("MAt_node",fam[i],".pssm")," > " ,paste0(getwd(),"/logo_synteny_family_",fam[i],"_",".pdf")))
+		#system(paste0("weblogo -F pdf -D transfac -A dna -c monochrome  -t ","synteny_family_",fam[i] ," < ", paste0("MAt_node",fam[i],".pssm")," > " ,paste0(getwd(),"/logo_synteny_family_",fam[i],"_",".pdf")))
+		system(paste0("weblogo -F pdf -D transfac -A dna -c monochrome --annotate ",anno_string," -t ","synteny_family_",fam[i] ," < ", paste0("MAt_node",fam[i],".pssm")," > " ,paste0(getwd(),"/logo_synteny_family_",fam[i],"_",".pdf")))
 		#return(mat)
+		
 	}
 }
-
-
 
 
 
@@ -1085,7 +1165,12 @@ for(i in 1:length(out_nodes)){
 	ti<-c(ti,la)
 	#print(c(out_nodes[i], unique(lab2[la])))
 	st<-paste(st, " %>% collapse(node=c(", out_nodes[i], "),color='black',fill='",color2[as.numeric(unique(lab2[la]))],"', 'max') ", sep="")
-	tmp<-unique(gsub("\\..*","",tree$tip.label[la]))
+	tmp<-strsplit(tree$tip.label[la],"_")
+	tmp<-lapply(tmp, function(x){
+		return(paste0(x[1]," ",x[2]))
+	})
+	tmp<-unique(unlist(tmp))
+	#tmp<-unique(gsub("\\..*","",tree$tip.label[la]))
 	if(length(tmp)>0){
 		tmp<-paste(sort(tmp), collapse="\n")
 	}
@@ -1122,13 +1207,18 @@ for(i in 1:length(out_nodes)){
 	ti<-c(ti,la)
 	#print(c(out_nodes[i], unique(lab2[la])))
 	st<-paste(st, " %>% collapse(node=c(", out_nodes[i], "),fill='",color2[as.numeric(unique(lab2[la]))],"', 'max') ", sep="")
-	tmp<-unique(gsub("\\..*","",tree$tip.label[la]))
+	#tmp<-unique(gsub("\\..*","",tree$tip.label[la]))
+	tmp<-strsplit(tree$tip.label[la],"_")
+	tmp<-lapply(tmp, function(x){
+		return(paste0(x[1]," ",x[2]))
+	})
+	tmp<-unique(unlist(tmp))
 	if(length(tmp)>0){
 		tmp<-paste(sort(tmp), collapse="\n")
 	}
 	an<-c(an,tmp)
 	if(is.element(out_nodes[i],tips2)==F){
-		st2<-paste(st2, " + geom_cladelabel(node=",out_nodes[i],",label='",(tmp),"', align=T, fontsize=1,color='",color2[as.numeric(unique(lab2[la]))],"')", sep="")
+		st2<-paste(st2, " + geom_cladelabel(node=",out_nodes[i],",label='",(tmp),"', align=F, offset=0.65 ,fontsize=0.8,color='",color2[as.numeric(unique(lab2[la]))],"')", sep="")
 	}
 }
 
@@ -1157,7 +1247,12 @@ for(i in 1:length(out_nodes)){
 	ti<-c(ti,la)
 	#print(c(out_nodes[i], unique(lab2[la])))
 	st<-paste(st, " %>% collapse(node=c(", out_nodes[i], "),color='black',fill='",color2[as.numeric(unique(lab2[la]))],"', 'max') ", sep="")
-	tmp<-unique(gsub("\\..*","",tree$tip.label[la]))
+	#tmp<-unique(gsub("\\..*","",tree$tip.label[la]))
+	tmp<-strsplit(tree$tip.label[la],"\\.")
+	tmp<-lapply(tmp, function(x){
+		return(paste0(x[1]," ",x[2]))
+	})
+	tmp<-unique(unlist(tmp))
 	if(length(tmp)>0){
 		tmp<-paste(sort(tmp), collapse="\n")
 	}
@@ -1207,9 +1302,11 @@ dev.off()
 # dev.off()
 
 # save.image()
-
-coor2<-match(fitJC$tree$tip.label, coor[,"ID"])
+coor<-cbind(coor, id_fam)
+coor2<-match(treeNJ$tip.label, coor[,"ID"])
 coor2<-coor[coor2,]
+coor2<-coor2[order(coor2[,"synteny_cluster"]),]
+
 #coor2<-as.matrix(coor2)
 colnames(id_fam)<-c("synteny_cluster","ID","all_cluster")
 pos<-match(coor2[,"ID"],id_fam[,2])
@@ -1218,7 +1315,7 @@ coor2<-coor2[order(coor2[,"synteny_cluster"]),]
 s<-as.numeric(as.character(coor2[,3]))
 e<-as.numeric(as.character(coor2[,4]))
 m<-round(s+(e-s)/2,digits=0)
-synteny_window<-5000
+#synteny_window<-5000
 wi<-rep(synteny_window,nrow(coor2))
 
 #coor3<-cbind(paste(coor[,1],"_",coor[,3],sep=""),coor[,1],m,wi)
@@ -1262,6 +1359,7 @@ names(out)<-ids
 for(i in 1:length(ids)){
 	tmp<-which(dat[,1]==ids[i])
 	srna<-match(ids[i],id2)
+	
 	if(is.na(srna)==FALSE){
 		stra<--1
 		if(coor2[srna,2]=="+"){
@@ -1291,25 +1389,50 @@ filen<-tempfile()
 tagtable<-locus_tag2org(out)
 
 
-rna_ex<-get_prot_fasta3(out, filen)
-cd<-cdhit_run(fasta=filen, psi=F,thres=0.4, threads=threads)
-cd<-proc_cdhit(cd)
-if(rna_ex=="existance_of_rna_genes"){
-	in_file<-paste0(filen,"_rna")
-	cd2<-cdhit_run_rna(fasta=in_file, thres=0.8, threads=threads)
-	cd2<-proc_cdhit(cd2)
-	cd<-c(cd,cd2)
-}
+# rna_ex<-get_prot_fasta3(out, filen)
+# cd<-cdhit_run(fasta=filen, psi=F,thres=0.4, threads=threads)
+# cd<-proc_cdhit(cd)
+# if(rna_ex=="existance_of_rna_genes"){
+	# in_file<-paste0(filen,"_rna")
+	# cd2<-cdhit_run_rna(fasta=in_file, thres=0.8, threads=threads)
+	# cd2<-proc_cdhit(cd2)
+	# cd<-c(cd,cd2)
+# }
 
 
 
 # get_prot_fasta3(out, filen)
 # cd<-cdhit_run(fasta=filen, psi=F,thres=0.4, threads=threads)
 # cd<-proc_cdhit(cd)
+d<-dir()
+anno_file<-d[grep("_Network_Annotation.txt",d)[1]]
+cluster_file<-d[grep("_Network_Cluster.txt",d)[1]]
+synt_table<-d[grep("_Synteny_Table.txt",d)[1]]
 
 
-plot_function4<-function(out, cdhit_result, wind=3000, outformat="cairo_pdf", fasta="sRNA"){ 
-  cdl<-unlist(lapply(cdhit_result,length))
+synt<-read.csv(synt_table,sep="\t", header=T)
+anno<-read.csv(anno_file,sep="\t", header=T)
+cluster<-read.csv(cluster_file,sep="\t", header=T)
+
+
+ex<-match(coor2[,"ID"], cluster[,"identifier"])
+clus<-c(cluster[ex, 2],cluster[ex, 3])
+clus<-unique(unlist(lapply(clus, strsplit, split=",")))
+clus<-setdiff(clus,"sRNA")
+
+
+#plot_function4<-function(out,  cdhit_result, wind=3000, outformat="cairo_pdf", fasta="sRNA"){ 
+plot_function4<-function(out, anno,coor2,clus, wind=3000, outformat="cairo_pdf", fasta="sRNA"){ 
+	
+	cdl<-c()
+	cd<-vector("list", length(clus))
+	for(i in 1:length(clus)){
+		tmp<-which(anno[,"node"]==clus[i])
+		tmp<-strsplit(anno[tmp,"tags"],",")[[1]]
+		cd[[i]]<-tmp
+		cdl<-c(cdl,length(tmp))
+	}
+ # cdl<-unlist(lapply(cdhit_result,length))
   one<-which(cdl==1)
   more<-which(cdl>1)
   nl<-length(more)
@@ -1320,10 +1443,10 @@ plot_function4<-function(out, cdhit_result, wind=3000, outformat="cairo_pdf", fa
   if(length(more)>0){
     collist<- sample(color, nl)
     for(i in 1:length(more)){
-      names(cdhit_result)[more[i]]<-collist[i]
+      names(cd)[more[i]]<-collist[i]
     }
   }
-  names(cdhit_result)[one]<-"grey"
+  names(cd)[one]<-"grey"
   numb<-ceiling(length(out)/5)
   
   
@@ -1405,14 +1528,20 @@ plot_function4<-function(out, cdhit_result, wind=3000, outformat="cairo_pdf", fa
     for(i in 1:le){
     
         temp<-out[[i]]
+		
+		
 		nam3<-names(out)[i]
+		id_pos<-match(nam3, coor2[,"ID"])
+		synt_fam<-coor2[id_pos,"synteny_cluster"]
         mi<-min(as.numeric(temp[,7]))
         ma<-max(as.numeric(temp[,8]))
 
         lines(c(mi,ma),c(1+count-i*4,1+count-i*4))
         lines(c(mi,ma),c(2+count-i*4,2+count-i*4))
         for(j in 1:nrow(temp)){
-
+			locus_t<-temp[j,"locus_tag"]
+			an<-grep(locus_t,anno[,"tags"])
+			clus_name<-anno[an,"cluster_name"]
           m<-(as.numeric(temp[j,8])-as.numeric(temp[j,7]))/2+as.numeric(temp[j,7])
           mm<-as.numeric(temp[j,8])-as.numeric(temp[j,7])
           n<--1
@@ -1423,14 +1552,15 @@ plot_function4<-function(out, cdhit_result, wind=3000, outformat="cairo_pdf", fa
             n<-0
           }
           color<-"white"
-          tcolor<-na.omit(grep(temp[j,5],cdhit_result))
-          tcolor2<-na.omit(grep(temp[j,4],cdhit_result))
+          tcolor<-na.omit(grep(temp[j,5],cd))
+          tcolor2<-na.omit(grep(temp[j,4],cd))
           tcolor<-c(tcolor,tcolor2)
           if(length(tcolor)>0){
-             color<-names(cdhit_result)[tcolor]
+             color<-names(cd)[tcolor]
            }
           rect(as.numeric(temp[j,7]),0.5+n+count-i*4,as.numeric(temp[j,8]),1.5+n+count-i*4, col=color)
-          text(m,n+count-i*4+1+0.25,gsub("\"","",gsub("NA ","",gsub("orf.*","",temp[j,4]))),cex=0.4,font=4)
+		  clus_name<-paste0(gsub("na","",gsub("\"","",gsub("NA ","",gsub("orf.*","",temp[j,4]))))," (",clus_name,")")
+          text(m,n+count-i*4+1+0.25,clus_name,cex=0.4,font=4)
 		  text(m,n+count-i*4+1-0.25,gsub("\"","",temp[j,5]),cex=0.4,font=4)
         }
         n<-as.numeric(temp[1,11])
@@ -1438,17 +1568,13 @@ plot_function4<-function(out, cdhit_result, wind=3000, outformat="cairo_pdf", fa
           n<-0
         }
         rect(as.numeric(temp[j,9]),0.5+n+count-i*4,as.numeric(temp[j,10]),1.5+n+count-i*4, col=2)
-        text(wind,count-i*4,paste(nam3, temp[1,12], sep="_"), cex=0.8, font=4)
+		
+        text(wind,count-i*4,paste0(nam3," ", temp[1,12], " Synteny family: ", synt_fam), cex=0.8, font=4)
   	
     }
  dev.off()	
 
 }
 
-plot_function4(out,cd,wind=synteny_window,outformat="pdf", fasta="sRNA")
-
-
-########## Copra selection
-
-
+plot_function4(out,anno,coor2,clus,wind=synteny_window,outformat="pdf", fasta="sRNA")
 
