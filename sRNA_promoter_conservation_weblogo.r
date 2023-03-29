@@ -10,7 +10,7 @@ require(ggtree)
 #R --slave -f  ~/media/jens@margarita/sRNA_scripts/sRNA_promoter_conservation_weblogo2.r --args wildcard_ids=NZ_CP018205.1,NZ_CP018205,CP018205.1,CP018205 filename=/home/jens/media/jens@margarita/Staph_enrichment/01_GLASSgo_Results/01_GLASSgo_Results/01_GLASSgo_Results/01_GLASSgo_Results/GLASSgo_output_HG001_02998.fa    synteny_window=5000 script_path=~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/synt_rRNA_fayyaz.db
 #R --slave -f  ~/media/jens@margarita/sRNA_scripts/sRNA_promoter_conservation_weblogo2.r --args wildcard_ids=NZ_CP018205.1,NZ_CP018205,CP018205.1,CP018205  synteny_window=5000 script_path=~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/synt_rRNA_fayyaz.db
 
-#R --slave -f  ~/media/jens@margarita/sRNA_scripts/sRNA_promoter_conservation_weblogo2.r --args  synteny_window=5000 script_path=~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/synt_rRNA_fayyaz.db
+#R --slave -f  ~/media/jens@margarita/sRNA_scripts/sRNA_promoter_conservation_weblogo.r --args  synteny_window=5000 script_path=~/Syntney/packages/GENBANK_GROPER_SQLITE/genbank_groper_sqliteDB.py db_path=~/synt_rRNA_fayyaz.db
 
 
 #filename<-file('stdin', 'r') # result fasta file from GLASSgo
@@ -323,6 +323,43 @@ while(length(which(duplicated(coor[,"ID"])))>0){
 
 n<-sort(table(paste(coor[,1],coor[,"name"],sep="_")))
 n<-cbind(names(n),n)
+
+
+n2<-lapply(n[,1],function(x) {
+	return(regmatches(x, regexpr("_", x), invert = TRUE)[[1]])
+})
+
+dd<-t(as.data.frame(do.call(cbind, n2)))
+
+
+n<-cbind(dd, n[,2])
+rownames(n) <- NULL
+
+
+id_fams<-read.csv("ids2synt_families.txt", sep="\t")
+
+o1<-c()
+o2<-c()
+o3<-c()
+for(i in 1:nrow(n)){
+	tmp<-grep(as.character(n[i,1]), as.character(id_fams[,2]))
+	tmp1<-""
+	tmp2<-""
+	tmp3<-""
+	if(length(tmp)>0){
+		for(j in 1:length(tmp)){
+			tmp1<-paste0(tmp1, id_fams[tmp[j],1], "|")
+			tmp2<-paste0(tmp2, id_fams[tmp[j],2], "|")
+			tmp3<-paste0(tmp3, id_fams[tmp[j],3], "|")
+		}
+	}
+	o1<-c(o1,tmp1)
+	o2<-c(o2,tmp2)
+	o3<-c(o3,tmp3)
+}
+n<-cbind(n, o1,o2,o3)
+
+colnames(n)<-c("Accesion_number","organism", "number_of_homologs", "main_synteny_families", "homolog_identifier","sub_families")
 
 write.table(n, file="sRNA_per_org.txt", sep="\t")
 #weight_comb
@@ -855,7 +892,7 @@ writeLines(prom2,con=temp_fas)
 align_prom2<-system(paste("mafft --thread 40 --maxiterate 1000 --localpair --quiet --inputorder  ", temp_fas," > ", temp_fas2,seq=""),intern=TRUE)
 
 
-
+#tree sRNA + xx upstream and xx downstream sequence
 
 pr<-read.phyDat(temp_fas2, format="fasta", type="DNA")
 dm <- dist.ml(pr, model="F81")
@@ -1132,7 +1169,7 @@ for(i in 1:length(fam)){
 		writeLines(mat, con=paste0("MAt_node",fam[i],".pssm"))
 		writeLines(align_prom, con=paste0("align_node",fam[i],".fa"))
 		#system(paste0("weblogo -F pdf -D transfac -A dna -c monochrome  -t ","synteny_family_",fam[i] ," < ", paste0("MAt_node",fam[i],".pssm")," > " ,paste0(getwd(),"/logo_synteny_family_",fam[i],"_",".pdf")))
-		system(paste0("weblogo -F pdf -D transfac -A dna -c monochrome --annotate ",anno_string," -t ","synteny_family_",fam[i] ," < ", paste0("MAt_node",fam[i],".pssm")," > " ,paste0(getwd(),"/logo_synteny_family_",fam[i],"_",".pdf")))
+		system(paste0("weblogo -F pdf -D transfac -A dna -c monochrome --annotate ",anno_string," -t ","synteny_family_",fam[i] ," < ", paste0("MAt_node",fam[i],".pssm")," > " ,paste0(getwd(),"/logo_synteny_family_",fam[i],"_22",".pdf")))
 		#return(mat)
 		
 	}
@@ -1227,7 +1264,7 @@ cl<-cl[order(ti)]
  eval(parse(text=st2))
 
 
-pdf("sRNA_reference.pdf")
+pdf("sRNA_reference_50.pdf")
 
 p
 
