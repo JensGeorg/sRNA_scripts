@@ -1169,7 +1169,7 @@ for(i in 1:length(fam)){
 		writeLines(mat, con=paste0("MAt_node",fam[i],".pssm"))
 		writeLines(align_prom, con=paste0("align_node",fam[i],".fa"))
 		#system(paste0("weblogo -F pdf -D transfac -A dna -c monochrome  -t ","synteny_family_",fam[i] ," < ", paste0("MAt_node",fam[i],".pssm")," > " ,paste0(getwd(),"/logo_synteny_family_",fam[i],"_",".pdf")))
-		system(paste0("weblogo -F pdf -D transfac -A dna -c monochrome --annotate ",anno_string," -t ","synteny_family_",fam[i] ," < ", paste0("MAt_node",fam[i],".pssm")," > " ,paste0(getwd(),"/logo_synteny_family_",fam[i],"_22",".pdf")))
+		system(paste0("weblogo -F pdf -D transfac -A dna -c monochrome --annotate ",anno_string," -t ","synteny_family_",fam[i] ," < ", paste0("MAt_node",fam[i],".pssm")," > " ,paste0(getwd(),"/logo_synteny_family_",fam[i],"_",".pdf")))
 		#return(mat)
 		
 	}
